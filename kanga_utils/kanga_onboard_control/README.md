@@ -1,0 +1,1 @@
+# Class for controlling the rover without base station
