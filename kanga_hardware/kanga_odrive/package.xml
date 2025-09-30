@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>kanga_odrive</name>
+  <version>0.0.1</version>
+  <description>Modified package to interface with odrive_can</description>
+  <maintainer email="hunter.dejong03@gmail.com">Hunter</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>std_srvs</depend>
+  <depend>kanga_canbus</depend>
+  <depend>kanga_interfaces</depend>
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

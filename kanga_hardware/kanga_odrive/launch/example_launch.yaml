@@ -1,0 +1,14 @@
+launch:
+
+- node:
+    pkg: "kanga_odrive"
+    exec: "odrive_can_node"
+    name: "can_node"
+    namespace: "odrive_axis0"
+    param:
+    -
+      name: "node_id"
+      value: 4
+    -
+      name: "interface"
+      value: "can1"
