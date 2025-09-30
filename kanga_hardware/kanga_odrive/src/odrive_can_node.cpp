@@ -278,8 +278,6 @@ void ODriveCanNode::request_clear_errors_callback() {
 }
 
 void ODriveCanNode::ctrl_msg_callback() {
-
-    RCLCPP_INFO(rclcpp::Node::get_logger(), "Received Control Message");
     
     uint32_t control_mode;
     struct can_frame frame;

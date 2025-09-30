@@ -29,9 +29,9 @@ private:
         }
 
         geometry_msgs::msg::Twist twist;
-        twist.linear.x  = msg->axes[0]; // axis 0 -> vx
-        twist.linear.y  = msg->axes[2]; // axis 1 -> vy
-        twist.angular.z = msg->axes[1]; // axis 2 -> wz
+        twist.linear.x  = msg->axes[0] * 15; // axis 0 -> vx
+        twist.linear.y  = msg->axes[2] * 15; // axis 1 -> vy
+        twist.angular.z = msg->axes[1] * 15; // axis 2 -> wz
 
         cmd_pub_->publish(twist);
     }

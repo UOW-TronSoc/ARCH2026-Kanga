@@ -1,0 +1,19 @@
+kanga_drive:
+  ros__parameters:
+    odrive_nodes:
+      - namespace: odrive_axis0
+        node_id: 1
+        interface: can1
+        invert: true
+      - namespace: odrive_axis1
+        node_id: 2
+        interface: can1
+        invert: true
+      - namespace: odrive_axis2
+        node_id: 3
+        interface: can1
+        invert: false
+      - namespace: odrive_axis3
+        node_id: 4
+        interface: can1
+        invert: false
