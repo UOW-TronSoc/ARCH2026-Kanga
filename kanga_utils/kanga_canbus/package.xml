@@ -1,8 +1,9 @@
+<?xml version="1.0"?>
 <package format="3">
-  <name>canbus_utils</name>
+  <name>kanga_canbus</name>
   <version>0.1.0</version>
-  <description>Reusable CAN bus interface utilities</description>
-  <maintainer email="user@example.com">Your Name</maintainer>
-  <license>MIT</license>
+  <description>Reusable CAN bus utilities for Kanga.</description>
+  <maintainer email="you@example.com">Hunter</maintainer>
+  <license>BSD-3-Clause</license>
   <buildtool_depend>ament_cmake</buildtool_depend>
 </package>
