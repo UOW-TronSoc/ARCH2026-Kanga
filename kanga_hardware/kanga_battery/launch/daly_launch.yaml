@@ -1,0 +1,20 @@
+launch:
+
+- node:
+    pkg: "kanga_battery"
+    exec: "daly_can_node"
+    name: "can_node"
+    namespace: "battery"
+    param:
+    -
+      name: "local_node_id"
+      value: 320
+    -
+      name: "daly_node_id"
+      value: 16385
+    -
+      name: "interface"
+      value: "can1"
+    -
+      name: "req_period"
+      value: 1
