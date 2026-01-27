@@ -1,6 +1,6 @@
-# quadruped_simulation
+# kanga_arm_simulation
 
-The `quadruped_simulation` package integrates the quadruped robot with the [RaiSim](https://raisim.com/) physics engine for real-time, high-fidelity simulation. It provides a bridge between ROS 2 and Raisim to simulate robot dynamics, publish joint states, and apply joint-level control inputs.
+The `kanga_arm_simulation` package integrates the kanga arm robot with the [RaiSim](https://raisim.com/) physics engine for real-time, high-fidelity simulation. It provides a bridge between ROS 2 and Raisim to simulate robot dynamics, publish joint states, and apply joint-level control inputs.
 
 ## Features
 
@@ -36,13 +36,13 @@ A ROS 2 node that bridges control messages and physics simulation using the Rais
 
 ### `raisim.launch.py`
 
-Entry point for launching the quadruped robot in a RaiSim physics simulation environment.
+Entry point for launching the kanga arm robot in a RaiSim physics simulation environment.
 
 #### Usage
 
 **Simulation:**
 ```bash
-ros2 launch quadruped_simulation raisim.launch.py
+ros2 launch kanga_arm_simulation raisim.launch.py
 ```
 
 ## Configs
@@ -51,4 +51,3 @@ ros2 launch quadruped_simulation raisim.launch.py
 
 | Parameter                  | Unit    | Description                                                        |
 | -------------------------- | ------- | ------------------------------------------------------------------ |
-| `fixed_robot_body     `    | bool    | Defines whether the quadruped body is fixed relative to world frame          |

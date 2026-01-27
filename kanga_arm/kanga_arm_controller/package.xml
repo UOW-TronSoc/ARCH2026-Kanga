@@ -1,13 +1,19 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>kanga_arm_description</name>
+  <name>kanga_arm_controller</name>
   <version>0.0.0</version>
-  <description>Defines the physical configuration, URDF model, and associated resources for the kanga arm robot</description>
+  <description>Contains the primary control node responsible generating joint-level control commands for a kanga arm robot from foot trajectories.
+  </description>
   <maintainer email="hunter.dejong03@gmail.com">hunter</maintainer>
   <license>TODO: License declaration</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>geometry_msgs</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

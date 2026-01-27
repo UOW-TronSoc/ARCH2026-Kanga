@@ -1,6 +1,6 @@
 # kanga_arm_description
 
-The `kanga_arm_description` package defines the physical configuration, URDF model, and associated resources for the quadruped robot. It provides mesh files, a robot description, and configurable parameters to be used by simulation or control packages.
+The `kanga_arm_description` package defines the physical configuration, URDF model, and associated resources for the kanga arm robot. It provides mesh files, a robot description, and configurable parameters to be used by simulation or control packages.
 
 ## Features
 
@@ -11,7 +11,7 @@ This package contains:
 
 ## Configs
 
-#### `leg_config.yaml`   
+#### `kanga_arm_config.yaml`   
 
 | Parameter                  | Unit    | Description                                                        |
 | -------------------------- | ------- | ------------------------------------------------------------------ |

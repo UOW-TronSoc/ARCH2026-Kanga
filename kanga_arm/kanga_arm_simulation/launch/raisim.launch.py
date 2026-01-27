@@ -9,10 +9,10 @@ def generate_launch_description():
     simulation_path = get_package_share_directory("kanga_arm_simulation")
 
     # Load config for leg configuration
-    leg_config = os.path.join(
+    kanga_arm_config = os.path.join(
         robot_description_path,
         'config',
-        'leg_config.yaml'
+        'kanga_arm_config.yaml'
         )
     
     # Load config for simulation parameters
@@ -34,7 +34,7 @@ def generate_launch_description():
                 {
                 "robot_description_path": robot_description_path,
                 }, 
-                leg_config,
+                kanga_arm_config,
                 simulation_params
             ]
         )

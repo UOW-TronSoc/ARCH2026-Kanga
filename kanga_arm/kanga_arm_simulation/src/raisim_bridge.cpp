@@ -71,7 +71,7 @@ public:
 		gf = Eigen::VectorXd::Zero(robot->getDOF());
 
 		// Default PD gains; can be tuned via params later if needed
-		kp_ = Eigen::VectorXd::Constant(robot->getGeneralizedCoordinateDim(), 1000.0);
+		kp_ = Eigen::VectorXd::Constant(robot->getGeneralizedCoordinateDim(), 500.0);
 		kd_ = Eigen::VectorXd::Constant(robot->getDOF(), 50000.0);
 
 		q_ref = joint_pos;
@@ -243,7 +243,7 @@ private:
 	void effortCommandCallback(const sensor_msgs::msg::JointState::SharedPtr msg)
 	{
 
-		RCLCPP_INFO(this->get_logger(), "test");
+		// RCLCPP_INFO(this->get_logger(), "test");
 
 		// Make sure control commands match the robot dof
 		if (msg->position.size() != robot->getDOF())
