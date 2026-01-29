@@ -16,6 +16,8 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/ControllerStatus.msg"
   "msg/ControlMessage.msg"
   "msg/ODriveStatus.msg"
+  "msg/BatteryInfo.msg"
+  "msg/BmsStatus.msg"
   "srv/AxisState.srv"
   DEPENDENCIES
     std_msgs
