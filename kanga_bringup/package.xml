@@ -11,6 +11,7 @@
 
   <exec_depend>kanga_drive</exec_depend>
   <exec_depend>kanga_onboard_control</exec_depend>
+  <exec_depend>kanga_cameras</exec_depend>
 
    <depend>launch</depend>
   <depend>launch_ros</depend>

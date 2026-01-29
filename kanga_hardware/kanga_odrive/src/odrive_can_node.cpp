@@ -1,7 +1,7 @@
 #include "odrive_can_node.hpp"
 #include "odrive_enums.h"
 #include "kanga_canbus/epoll_event_loop.hpp"
-#include "byte_swap.hpp"
+#include "kanga_canbus/byte_swap.hpp"
 #include <sys/eventfd.h>
 #include <chrono>
 
