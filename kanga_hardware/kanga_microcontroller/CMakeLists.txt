@@ -15,39 +15,61 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/MicrocontrollerFrame.msg"
   DEPENDENCIES std_msgs
 )
-ament_export_dependencies(rosidl_default_runtime)
+ament_export_dependencies(rclcpp kanga_canbus rosidl_default_runtime)
+ament_export_include_directories(include)
 
 rosidl_get_typesupport_target(cpp_typesupport_target
   ${PROJECT_NAME} rosidl_typesupport_cpp)
 
-add_executable(microcontroller_can_node
+add_library(microcontroller_can_node_lib
   src/microcontroller_can_node.cpp
+)
+
+target_compile_features(microcontroller_can_node_lib PRIVATE cxx_std_20)
+
+target_include_directories(microcontroller_can_node_lib PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
+
+ament_target_dependencies(microcontroller_can_node_lib
+  rclcpp
+  kanga_canbus
+)
+
+target_link_libraries(microcontroller_can_node_lib
+  ${cpp_typesupport_target}
+)
+
+add_dependencies(microcontroller_can_node_lib
+  ${PROJECT_NAME}__cpp
+)
+
+add_executable(microcontroller_can_node
   src/main.cpp
 )
 
 target_compile_features(microcontroller_can_node PRIVATE cxx_std_20)
 
-target_include_directories(microcontroller_can_node PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>
+target_link_libraries(microcontroller_can_node
+  microcontroller_can_node_lib
 )
 
 ament_target_dependencies(microcontroller_can_node
   rclcpp
-  kanga_canbus
-)
-
-target_link_libraries(microcontroller_can_node
-  ${cpp_typesupport_target}
-)
-
-add_dependencies(microcontroller_can_node
-  ${PROJECT_NAME}__cpp
 )
 
 install(TARGETS microcontroller_can_node
   RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
+
+install(TARGETS microcontroller_can_node_lib
+  EXPORT microcontroller_can_node_targets
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+)
+
+ament_export_targets(microcontroller_can_node_targets HAS_LIBRARY_TARGET)
 
 install(DIRECTORY include/
   DESTINATION include

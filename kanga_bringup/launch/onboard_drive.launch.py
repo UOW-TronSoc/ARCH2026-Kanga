@@ -16,13 +16,13 @@ def generate_launch_description() -> LaunchDescription:
         )
     )
 
-    keyboard_twist = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            os.path.join(onboard_control_share, 'launch', 'keyboard_joy_with_twist.launch.py'),
-        )
-    )
+    # keyboard_twist = IncludeLaunchDescription(
+    #     PythonLaunchDescriptionSource(
+    #         os.path.join(onboard_control_share, 'launch', 'keyboard_joy_with_twist.launch.py'),
+    #     )
+    # )
 
     return LaunchDescription([
         drive_with_mapper,
-        keyboard_twist,
+        # keyboard_twist,
     ])

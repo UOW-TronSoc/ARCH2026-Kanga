@@ -39,6 +39,7 @@ private:
     bool allow_tx_id_override_ = true;
     bool force_extended_tx_ = true;
     uint32_t tx_base_id_ = 0;
+    bool debug_logging_ = false;
 
     SocketCanIntf can_intf_ = SocketCanIntf();
 
@@ -46,6 +47,12 @@ private:
     rclcpp::Subscription<MicrocontrollerFrame>::SharedPtr tx_subscription_;
 
     mutable std::mutex tx_mutex_;
+
+    inline void debug_log(const std::string &message) const {
+        if (debug_logging_) {
+            RCLCPP_INFO(this->get_logger(), "%s", message.c_str());
+        }
+    }
 };
 
 #endif // MICROCONTROLLER_CAN_NODE_HPP

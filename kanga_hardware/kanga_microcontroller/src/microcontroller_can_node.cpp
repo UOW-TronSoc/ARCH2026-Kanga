@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <bit>
 #include <cstring>
+#include <sstream>
 
 MicrocontrollerCanNode::MicrocontrollerCanNode(const std::string &node_name)
     : rclcpp::Node(node_name) {
@@ -17,6 +18,7 @@ MicrocontrollerCanNode::MicrocontrollerCanNode(const std::string &node_name)
     this->declare_parameter<int64_t>("tx_base_id", 0);
     this->declare_parameter<bool>("auto_header_stamp", true);
     this->declare_parameter<bool>("drop_remote_frames", true);
+    this->declare_parameter<bool>("debug_logging", false);
 
     rclcpp::QoS qos(rclcpp::KeepLast(64));
     rx_publisher_ = this->create_publisher<MicrocontrollerFrame>("microcontroller_rx", qos);
@@ -36,13 +38,25 @@ bool MicrocontrollerCanNode::init(EpollEventLoop *event_loop) {
     tx_base_id_ = static_cast<uint32_t>(this->get_parameter("tx_base_id").as_int());
     auto_header_stamp_ = this->get_parameter("auto_header_stamp").as_bool();
     drop_remote_frames_ = this->get_parameter("drop_remote_frames").as_bool();
+    debug_logging_ = this->get_parameter("debug_logging").as_bool();
 
     if (!can_intf_.init(interface_, event_loop, std::bind(&MicrocontrollerCanNode::recv_callback, this, _1))) {
         RCLCPP_ERROR(this->get_logger(), "Failed to initialize socket CAN interface: %s", interface_.c_str());
         return false;
     }
 
-    RCLCPP_INFO(this->get_logger(), "Microcontroller CAN node ready on %s (node id %u)", interface_.c_str(), node_id_);
+    RCLCPP_INFO(this->get_logger(),
+                "Microcontroller CAN node ready on %s (node id 0x%X mask 0x%X shift %u extended_rx=%s)",
+                interface_.c_str(), node_id_, node_id_mask_, node_id_shift_, expect_extended_id_ ? "true" : "false");
+    if (debug_logging_) {
+        RCLCPP_INFO(this->get_logger(),
+                    "Debug logging enabled: filter_by_node=%s drop_remote=%s tx_force_ext=%s tx_base=0x%X allow_override=%s",
+                    filter_by_node_ ? "true" : "false",
+                    drop_remote_frames_ ? "true" : "false",
+                    force_extended_tx_ ? "true" : "false",
+                    tx_base_id_,
+                    allow_tx_id_override_ ? "true" : "false");
+    }
     return true;
 }
 
@@ -53,12 +67,16 @@ void MicrocontrollerCanNode::deinit() {
 void MicrocontrollerCanNode::recv_callback(const can_frame &frame) {
     const bool is_extended = (frame.can_id & CAN_EFF_FLAG) != 0;
     if (expect_extended_id_ && !is_extended) {
-        RCLCPP_DEBUG(this->get_logger(), "Ignoring standard frame 0x%X on extended-only interface", frame.can_id);
+        if (debug_logging_) {
+            RCLCPP_INFO(this->get_logger(), "Dropping standard frame 0x%X (expecting extended)", frame.can_id);
+        }
         return;
     }
 
     if (drop_remote_frames_ && (frame.can_id & CAN_RTR_FLAG)) {
-        RCLCPP_DEBUG(this->get_logger(), "Ignoring remote frame 0x%X", frame.can_id);
+        if (debug_logging_) {
+            RCLCPP_INFO(this->get_logger(), "Dropping remote frame 0x%X", frame.can_id);
+        }
         return;
     }
 
@@ -66,7 +84,17 @@ void MicrocontrollerCanNode::recv_callback(const can_frame &frame) {
     const uint32_t raw_id = frame.can_id & mask;
     const uint32_t detected_node_id = extract_node_id(raw_id);
 
+    if (debug_logging_) {
+        RCLCPP_INFO(this->get_logger(),
+                    "RX frame id=0x%X dlc=%u node=0x%X is_ext=%s", raw_id, frame.can_dlc, detected_node_id,
+                    is_extended ? "true" : "false");
+    }
+
     if (filter_by_node_ && detected_node_id != node_id_) {
+        if (debug_logging_) {
+            RCLCPP_INFO(this->get_logger(),
+                        "Dropping frame 0x%X: node mismatch (expected 0x%X)", raw_id, node_id_);
+        }
         return;
     }
 
@@ -84,6 +112,12 @@ void MicrocontrollerCanNode::recv_callback(const can_frame &frame) {
     }
     msg.is_extended = is_extended;
     msg.is_remote = (frame.can_id & CAN_RTR_FLAG) != 0;
+
+    if (debug_logging_) {
+        std::ostringstream oss;
+        oss << "Publishing frame id=0x" << std::hex << msg.can_id << " len=" << std::dec << int(msg.dlc);
+        debug_log(oss.str());
+    }
 
     rx_publisher_->publish(msg);
 }
@@ -148,6 +182,13 @@ void MicrocontrollerCanNode::tx_callback(const MicrocontrollerFrame::SharedPtr m
 
     {
         std::lock_guard<std::mutex> guard(tx_mutex_);
+        if (debug_logging_) {
+            RCLCPP_INFO(this->get_logger(),
+                        "TX frame id=0x%X dlc=%u ext=%s rtr=%s", frame.can_id & (frame.can_id & CAN_EFF_FLAG ? CAN_EFF_MASK : CAN_SFF_MASK),
+                        frame.can_dlc, (frame.can_id & CAN_EFF_FLAG) ? "true" : "false",
+                        (frame.can_id & CAN_RTR_FLAG) ? "true" : "false");
+        }
+
         if (!can_intf_.send_can_frame(frame)) {
             RCLCPP_ERROR(this->get_logger(), "Failed to transmit CAN frame (id=0x%X)", requested_id);
         }
