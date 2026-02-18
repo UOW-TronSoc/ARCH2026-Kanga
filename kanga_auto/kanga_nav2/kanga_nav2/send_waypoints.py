@@ -20,14 +20,16 @@ def main() -> None:
     navigator = BasicNavigator()
 
     # No localization stack: map->odom is fixed, so current Gazebo pose is directly usable.
-    navigator.waitUntilNav2Active()
+    # No AMCL in this simulation setup; use map_server lifecycle as readiness gate.
+    navigator.waitUntilNav2Active(localizer='map_server')
 
     waypoints = [
+
         make_pose(navigator, 5.0, 5.0),
-        make_pose(navigator, 15.0, 5.0),
-        make_pose(navigator, 15.0, 15.0),
+        make_pose(navigator, 20.0, 5.0),
+        make_pose(navigator, 20.0, 15.0),
         make_pose(navigator, 5.0, 15.0),
-        make_pose(navigator, 0.0, 0.0),
+        # make_pose(navigator, 0.0, 0.0),
     ]
 
     navigator.goThroughPoses(waypoints)

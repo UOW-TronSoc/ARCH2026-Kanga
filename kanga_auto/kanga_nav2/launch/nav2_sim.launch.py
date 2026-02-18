@@ -31,6 +31,29 @@ def generate_launch_description():
         arguments=['0', '0', '0', '0', '0', '0', 'map', 'odom'],
     )
 
+    map_server = Node(
+        package='nav2_map_server',
+        executable='map_server',
+        name='map_server',
+        output='screen',
+        parameters=[
+            {'use_sim_time': use_sim_time},
+            {'yaml_filename': map_yaml},
+        ],
+    )
+
+    lifecycle_manager_map = Node(
+        package='nav2_lifecycle_manager',
+        executable='lifecycle_manager',
+        name='lifecycle_manager_map',
+        output='screen',
+        parameters=[
+            {'use_sim_time': use_sim_time},
+            {'autostart': True},
+            {'node_names': ['map_server']},
+        ],
+    )
+
     nav2_bringup = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(nav2_bringup_dir, 'launch', 'navigation_launch.py')
@@ -60,6 +83,8 @@ def generate_launch_description():
         DeclareLaunchArgument('map', default_value=default_map),
         DeclareLaunchArgument('params_file', default_value=default_params),
         map_to_odom_tf,
+        map_server,
+        lifecycle_manager_map,
         nav2_bringup,
         rviz,
     ])
