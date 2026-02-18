@@ -1,0 +1,295 @@
+<?xml version="1.0" ?>
+<!-- Generated using onshape-to-robot -->
+<!-- Onshape https://tronsoc.onshape.com/documents/1c492049a2e71feeba4bb134/w/b322db97232ca622375ccdbf/e/3271415db943d39f5acebee7 -->
+<robot name="kangaSIM">
+  <link name="base_link"/>
+
+  <joint name="base_link_to_kangacore" type="fixed">
+    <parent link="base_link"/>
+    <child link="kangacore"/>
+    <origin xyz="0.55486398 0.44572500 0.39697" rpy="0 0 1.5708"/>
+  </joint>
+  <!-- Link kangacore -->
+  <link name="kangacore">
+    <inertial>
+      <origin xyz="-0.0141691 0.0193788 -0.00941986" rpy="0 0 0"/>
+      <mass value="28"/>
+      <inertia ixx="4.60338" ixy="0.0986559" ixz="0.228577" iyy="3.15117" iyz="-0.170318" izz="3.83681"/>
+    </inertial>
+    <!-- Part kangacore -->
+    <visual>
+      <origin xyz="-9.71445e-17 0.0406693 2.08167e-16" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="file:///home/hunter/gazebo_ws/src/kanga_sim/urdf/kangacore.stl"/>
+      </geometry>
+      <material name="kangacore_material">
+        <color rgba="0.917647 0.917647 0.917647 1"/>
+      </material>
+    </visual>
+    <!-- <collision>
+      <origin xyz="-9.71445e-17 0.0406693 2.08167e-16" rpy="0 -0 0"/>
+      <geometry>
+        <mesh filename="file:///home/hunter/gazebo_ws/src/kanga_sim/urdf/kangacore.stl"/>
+      </geometry>
+    </collision> -->
+    <collision>
+      <origin xyz="0.0 -0.02 -0.05" rpy="0 0 0"/>
+      <geometry>
+        <box size="0.489 0.72 0.35"/>
+      </geometry>
+    </collision>
+  </link>
+  <!-- Link wheelb -->
+  <link name="wheelb">
+    <inertial>
+      <origin xyz="8.20141e-07 4.19108e-07 0.0294338" rpy="0 0 0"/>
+      <mass value="0.7"/>
+      <inertia ixx="0.00536519" ixy="2.63673e-08" ixz="3.55462e-07" iyy="0.00536521" iyz="7.37764e-09" izz="0.00759451"/>
+    </inertial>
+    <!-- Part wheelb -->
+    <visual>
+      <origin xyz="5.55112e-17 0 -0.05" rpy="-1.5708 9.3268e-33 1.56432e-46"/>
+      <geometry>
+        <mesh filename="file:///home/hunter/gazebo_ws/src/kanga_sim/urdf/wheelb.stl"/>
+      </geometry>
+      <material name="wheelb_material">
+        <color rgba="0.929412 0.0392157 0 1"/>
+      </material>
+    </visual>
+    <!-- <collision>
+      <origin xyz="5.55112e-17 0 -0.05" rpy="-1.5708 9.3268e-33 1.56432e-46"/>
+      <geometry>
+        <mesh filename="file:///home/hunter/gazebo_ws/src/kanga_sim/urdf/wheelb.stl"/>
+      </geometry>
+    </collision> -->
+    <collision>
+      <origin xyz="0 0 0.04" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.125" length="0.18"/>
+      </geometry>
+    </collision>
+  </link>
+  <!-- Joint from kangacore to wheelb -->
+  <joint name="wheel1" type="continuous">
+    <origin xyz="0.395775 -0.428413 -0.271989" rpy="1.5708 7.67773e-31 -1.5708"/>
+    <parent link="kangacore"/>
+    <child link="wheelb"/>
+    <axis xyz="0 0 -1"/>
+    <limit effort="10" velocity="10"/>
+  </joint>
+  <!-- Link wheel_a -->
+  <link name="wheel_a">
+    <inertial>
+      <origin xyz="1.69548e-06 -4.25166e-07 0.0294802" rpy="0 0 0"/>
+      <mass value="0.7"/>
+      <inertia ixx="0.0053658" ixy="2.7862e-08" ixz="3.79976e-07" iyy="0.00536582" iyz="-5.26265e-09" izz="0.00759416"/>
+    </inertial>
+    <!-- Part wheel_a -->
+    <visual>
+      <origin xyz="0 -5.55112e-17 -0.05" rpy="-1.5708 -3.2996e-32 -1.75162e-46"/>
+      <geometry>
+        <mesh filename="file:///home/hunter/gazebo_ws/src/kanga_sim/urdf/wheel_a.stl"/>
+      </geometry>
+      <material name="wheel_a_material">
+        <color rgba="0.929412 0.0392157 0 1"/>
+      </material>
+    </visual>
+    <!-- <collision>
+      <origin xyz="0 -5.55112e-17 -0.05" rpy="-1.5708 -3.2996e-32 -1.75162e-46"/>
+      <geometry>
+        <mesh filename="file:///home/hunter/gazebo_ws/src/kanga_sim/urdf/wheel_a.stl"/>
+      </geometry>
+    </collision> -->
+    <collision>
+      <origin xyz="0 0 0.04" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.125" length="0.18"/>
+      </geometry>
+    </collision>
+  </link>
+  <!-- Joint from kangacore to wheel_a -->
+  <joint name="wheel2" type="continuous">
+    <origin xyz="0.395775 0.430143 -0.272479" rpy="1.5708 -1.41751e-30 -1.5708"/>
+    <parent link="kangacore"/>
+    <child link="wheel_a"/>
+    <axis xyz="0 0 -1"/>
+    <limit effort="10" velocity="10"/>
+  </joint>
+  <!-- Link wheelb_2 -->
+  <link name="wheelb_2">
+    <inertial>
+      <origin xyz="8.20141e-07 4.19108e-07 0.0294338" rpy="0 0 0"/>
+      <mass value="0.7"/>
+      <inertia ixx="0.00536519" ixy="2.63673e-08" ixz="3.55462e-07" iyy="0.00536521" iyz="7.37764e-09" izz="0.00759451"/>
+    </inertial>
+    <!-- Part wheelb_2 -->
+    <visual>
+      <origin xyz="0 5.55112e-17 -0.05" rpy="-1.5708 -7.57665e-32 -3.26264e-46"/>
+      <geometry>
+        <mesh filename="file:///home/hunter/gazebo_ws/src/kanga_sim/urdf/wheelb.stl"/>
+      </geometry>
+      <material name="wheelb_2_material">
+        <color rgba="0.929412 0.0392157 0 1"/>
+      </material>
+    </visual>
+    <!-- <collision>
+      <origin xyz="0 5.55112e-17 -0.05" rpy="-1.5708 -7.57665e-32 -3.26264e-46"/>
+      <geometry>
+        <mesh filename="file:///home/hunter/gazebo_ws/src/kanga_sim/urdf/wheelb.stl"/>
+      </geometry>
+    </collision> -->
+    <collision>
+      <origin xyz="0.0 0 0.04" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.125" length="0.18"/>
+      </geometry>
+    </collision>
+  </link>
+  <!-- Joint from kangacore to wheelb_2 -->
+  <joint name="wheel3" type="continuous">
+    <origin xyz="-0.395725 0.430143 -0.272479" rpy="1.5708 8.1595e-31 1.5708"/>
+    <parent link="kangacore"/>
+    <child link="wheelb_2"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="10" velocity="10"/>
+  </joint>
+  <!-- Link wheel_a_2 -->
+  <link name="wheel_a_2">
+    <inertial>
+      <origin xyz="1.69548e-06 -4.25166e-07 0.0294802" rpy="0 0 0"/>
+      <mass value="0.7"/>
+      <inertia ixx="0.0053658" ixy="2.7862e-08" ixz="3.79976e-07" iyy="0.00536582" iyz="-5.26265e-09" izz="0.00759416"/>
+    </inertial>
+    <!-- Part wheel_a_2 -->
+    <visual>
+      <origin xyz="0 0 -0.05" rpy="-1.5708 1.4873e-44 0"/>
+      <geometry>
+        <mesh filename="file:///home/hunter/gazebo_ws/src/kanga_sim/urdf/wheel_a.stl"/>
+      </geometry>
+      <material name="wheel_a_2_material">
+        <color rgba="0.929412 0.0392157 0 1"/>
+      </material>
+    </visual>
+    <!-- <collision>
+      <origin xyz="0 0 -0.05" rpy="-1.5708 1.4873e-44 0"/>
+      <geometry>
+        <mesh filename="file:///home/hunter/gazebo_ws/src/kanga_sim/urdf/wheel_a.stl"/>
+      </geometry>
+    </collision> -->
+    <collision>
+      <origin xyz="0.0 0 0.04" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="0.125" length="0.18"/>
+      </geometry>
+    </collision>
+  </link>
+  <!-- Joint from kangacore to wheel_a_2 -->
+  <joint name="wheel4" type="continuous">
+    <origin xyz="-0.395725 -0.428413 -0.271989" rpy="1.5708 -5.23547e-30 1.5708"/>
+    <parent link="kangacore"/>
+    <child link="wheel_a_2"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="10" velocity="10"/>
+  </joint>
+
+  <gazebo reference="wheelb">
+    <mu1>1.6</mu1>
+    <mu2>1.6</mu2>
+    <kp>650000.0</kp>
+    <kd>200.0</kd>
+    <slip1>0.15</slip1>
+    <slip2>0.25</slip2>
+  </gazebo>
+
+  <gazebo reference="wheel_a">
+    <mu1>1.6</mu1>
+    <mu2>1.6</mu2>
+    <kp>650000.0</kp>
+    <kd>200.0</kd>
+    <slip1>0.15</slip1>
+    <slip2>0.25</slip2>
+  </gazebo>`
+
+  <gazebo reference="wheelb_2">
+    <mu1>1.6</mu1>
+    <mu2>1.6</mu2>
+    <kp>650000.0</kp>
+    <kd>200.0</kd>
+    <slip1>0.15</slip1>
+    <slip2>0.25</slip2>
+  </gazebo>
+
+  <gazebo reference="wheel_a_2">
+    <mu1>1.6</mu1>
+    <mu2>1.6</mu2>
+    <kp>650000.0</kp>
+    <kd>200.0</kd>
+    <slip1>0.15</slip1>
+    <slip2>0.25</slip2>
+  </gazebo>
+
+  <gazebo reference="kangacore">
+    <mu1>0.2</mu1>
+    <mu2>0.2</mu2>
+  </gazebo>
+
+  <gazebo>
+    <plugin name="gazebo_ros_joint_state_publisher" filename="libgazebo_ros_joint_state_publisher.so">
+      <ros>
+        <namespace>/</namespace>
+        <remapping>joint_states:=joint_states</remapping>
+      </ros>
+      <update_rate>30</update_rate>
+      <joint_name>wheel1</joint_name>
+      <joint_name>wheel2</joint_name>
+      <joint_name>wheel3</joint_name>
+      <joint_name>wheel4</joint_name>
+    </plugin>
+
+    <plugin name="gazebo_ros_diff_drive_primary" filename="libgazebo_ros_diff_drive.so">
+      <ros>
+        <namespace>/</namespace>
+        <remapping>cmd_vel:=cmd_vel</remapping>
+        <remapping>odom:=odom</remapping>
+      </ros>
+
+      <update_rate>10</update_rate>
+
+      <left_joint>wheel1</left_joint>
+      <right_joint>wheel4</right_joint>
+
+      <wheel_separation>0.7115</wheel_separation>
+      <wheel_diameter>0.25</wheel_diameter>
+
+      <publish_odom>true</publish_odom>
+      <publish_odom_tf>true</publish_odom_tf>
+      <odometry_frame>odom</odometry_frame>
+      <robot_base_frame>base_link</robot_base_frame>
+
+      <max_wheel_torque>80</max_wheel_torque>
+      <max_wheel_acceleration>1.6</max_wheel_acceleration>
+    </plugin>
+
+    <plugin name="gazebo_ros_diff_drive_follower" filename="libgazebo_ros_diff_drive.so">
+      <ros>
+        <namespace>/</namespace>
+        <remapping>cmd_vel:=cmd_vel</remapping>
+      </ros>
+
+      <update_rate>10</update_rate>
+
+      <left_joint>wheel2</left_joint>
+      <right_joint>wheel3</right_joint>
+
+      <wheel_separation>0.7115</wheel_separation>
+      <wheel_diameter>0.25</wheel_diameter>
+
+      <publish_odom>false</publish_odom>
+      <publish_odom_tf>false</publish_odom_tf>
+
+      <max_wheel_torque>80</max_wheel_torque>
+      <max_wheel_acceleration>1.6</max_wheel_acceleration>
+    </plugin>
+  </gazebo>
+
+</robot>
