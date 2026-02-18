@@ -27,7 +27,7 @@ def main() -> None:
 
         make_pose(navigator, 5.0, 5.0),
         make_pose(navigator, 20.0, 5.0),
-        make_pose(navigator, 20.0, 15.0),
+        make_pose(navigator, 20.0, 15.0, 0.0),
         make_pose(navigator, 5.0, 15.0),
         # make_pose(navigator, 0.0, 0.0),
     ]

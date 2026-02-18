@@ -17,7 +17,7 @@ controller_server:
     controller_frequency: 20.0
     min_x_velocity_threshold: 0.001
     min_y_velocity_threshold: 0.5
-    min_theta_velocity_threshold: 0.001
+    min_theta_velocity_threshold: 0.05
     failure_tolerance: 0.3
     progress_checker_plugin: progress_checker
     goal_checker_plugins: [general_goal_checker]
@@ -31,26 +31,26 @@ controller_server:
     general_goal_checker:
       stateful: True
       plugin: nav2_controller::SimpleGoalChecker
-      xy_goal_tolerance: 0.15
-      yaw_goal_tolerance: 0.2
+      xy_goal_tolerance: 0.08
+      yaw_goal_tolerance: 1.57
 
     FollowPath:
       plugin: dwb_core::DWBLocalPlanner
       debug_trajectory_details: False
       min_vel_x: 0.0
-      max_vel_x: 0.4
+      max_vel_x: 0.40
       min_vel_y: 0.0
       max_vel_y: 0.0
-      max_vel_theta: 1.2
+      max_vel_theta: 1.5
       min_speed_xy: 0.0
-      max_speed_xy: 0.4
+      max_speed_xy: 0.40
       min_speed_theta: 0.0
       acc_lim_x: 1.0
       acc_lim_y: 0.0
-      acc_lim_theta: 2.0
+      acc_lim_theta: 1.0
       decel_lim_x: -1.0
       decel_lim_y: 0.0
-      decel_lim_theta: -2.0
+      decel_lim_theta: -1.0
       vx_samples: 20
       vy_samples: 1
       vtheta_samples: 20
@@ -58,8 +58,8 @@ controller_server:
       linear_granularity: 0.05
       angular_granularity: 0.025
       transform_tolerance: 0.2
-      xy_goal_tolerance: 0.15
-      trans_stopped_velocity: 0.05
+      xy_goal_tolerance: 0.08
+      trans_stopped_velocity: 0.02
       short_circuit_trajectory_evaluation: True
       stateful: True
       critics: [RotateToGoal, Oscillation, BaseObstacle, GoalAlign, PathAlign, PathDist, GoalDist]
@@ -70,8 +70,8 @@ controller_server:
       GoalAlign.forward_point_distance: 0.1
       PathDist.scale: 32.0
       GoalDist.scale: 24.0
-      RotateToGoal.scale: 32.0
-      RotateToGoal.slowing_factor: 5.0
+      RotateToGoal.scale: 2.0
+      RotateToGoal.slowing_factor: 8.0
       RotateToGoal.lookahead_time: -1.0
 
 local_costmap:
@@ -182,10 +182,10 @@ velocity_smoother:
     smoothing_frequency: 20.0
     scale_velocities: False
     feedback: OPEN_LOOP
-    max_velocity: [0.4, 0.0, 1.2]
-    min_velocity: [0.0, 0.0, -1.2]
-    max_accel: [1.0, 0.0, 2.0]
-    max_decel: [-1.0, 0.0, -2.0]
+    max_velocity: [0.4, 0.0, 1.5]
+    min_velocity: [-0.12, 0.0, -1.5]
+    max_accel: [1.0, 0.0, 1.0]
+    max_decel: [-1.0, 0.0, -1.0]
     odom_topic: /odom
     odom_duration: 0.1
     deadband_velocity: [0.0, 0.0, 0.0]
