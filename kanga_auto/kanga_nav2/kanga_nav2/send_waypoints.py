@@ -1,17 +1,27 @@
 #!/usr/bin/env python3
 
+#!/usr/bin/env python3
+import math
 import rclpy
 from geometry_msgs.msg import PoseStamped
 from nav2_simple_commander.robot_navigator import BasicNavigator, TaskResult
 
+def quat_from_yaw(yaw: float):
+    z = math.sin(yaw * 0.5)
+    w = math.cos(yaw * 0.5)
+    return (0.0, 0.0, z, w)
 
-def make_pose(navigator: BasicNavigator, x: float, y: float, yaw_w: float = 1.0) -> PoseStamped:
+def make_pose(navigator: BasicNavigator, x: float, y: float, yaw: float = 0.0) -> PoseStamped:
     pose = PoseStamped()
-    pose.header.frame_id = 'map'
+    pose.header.frame_id = "map"
     pose.header.stamp = navigator.get_clock().now().to_msg()
-    pose.pose.position.x = x
-    pose.pose.position.y = y
-    pose.pose.orientation.w = yaw_w
+    pose.pose.position.x = float(x)
+    pose.pose.position.y = float(y)
+    qx, qy, qz, qw = quat_from_yaw(float(yaw))
+    pose.pose.orientation.x = qx
+    pose.pose.orientation.y = qy
+    pose.pose.orientation.z = qz
+    pose.pose.orientation.w = qw
     return pose
 
 
@@ -27,7 +37,7 @@ def main() -> None:
 
         make_pose(navigator, 5.0, 5.0),
         make_pose(navigator, 20.0, 5.0),
-        make_pose(navigator, 20.0, 15.0, 0.0),
+        make_pose(navigator, 20.0, 15.0),
         make_pose(navigator, 5.0, 15.0),
         # make_pose(navigator, 0.0, 0.0),
     ]
