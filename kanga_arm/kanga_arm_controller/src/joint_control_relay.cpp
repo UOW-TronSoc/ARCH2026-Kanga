@@ -27,7 +27,7 @@ public:
 		last_velocity_time_ = steady_clock_.now();
 
 		joint_control_sub_ = this->create_subscription<sensor_msgs::msg::JointState>(
-			"arm_velocity_command", 10,
+			"/kanga_arm/joint_control", 10,
 			std::bind(&JointControlRelay::jointControlCallback, this, std::placeholders::_1));
 
 		desired_control_pub_ = this->create_publisher<sensor_msgs::msg::JointState>(
