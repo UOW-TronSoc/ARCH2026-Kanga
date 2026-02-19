@@ -32,11 +32,17 @@ def main() -> None:
         # make_pose(navigator, 0.0, 0.0),
     ]
 
-    navigator.goThroughPoses(waypoints)
+    accepted = navigator.goThroughPoses(waypoints)
+    if not accepted:
+        navigator.get_logger().error('Waypoint route was rejected by the action server')
+        rclpy.shutdown()
+        return
 
+    last_feedback = None
     while not navigator.isTaskComplete():
         feedback = navigator.getFeedback()
         if feedback is not None:
+            last_feedback = feedback
             navigator.get_logger().info('Following waypoint route...')
 
     result = navigator.getResult()
@@ -44,10 +50,26 @@ def main() -> None:
         navigator.get_logger().info('Waypoint route completed')
     elif result == TaskResult.CANCELED:
         navigator.get_logger().error('Waypoint route canceled')
+        navigator.get_logger().error(f'Action status code: {navigator.status}')
     elif result == TaskResult.FAILED:
         navigator.get_logger().error('Waypoint route failed')
+        navigator.get_logger().error(f'Action status code: {navigator.status}')
     else:
         navigator.get_logger().error('Waypoint route ended with unknown result')
+
+    if result != TaskResult.SUCCEEDED and last_feedback is not None:
+        navigator.get_logger().error(
+            'Last feedback: remaining poses=%d, distance_remaining=%.3f, '
+            'navigation_time=%d.%09d, estimated_time_remaining=%d.%09d, '
+            'recoveries=%d',
+            last_feedback.number_of_poses_remaining,
+            last_feedback.distance_remaining,
+            last_feedback.navigation_time.sec,
+            last_feedback.navigation_time.nanosec,
+            last_feedback.estimated_time_remaining.sec,
+            last_feedback.estimated_time_remaining.nanosec,
+            last_feedback.number_of_recoveries,
+        )
 
     rclpy.shutdown()
 

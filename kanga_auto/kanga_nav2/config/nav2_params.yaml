@@ -35,44 +35,47 @@ controller_server:
       yaw_goal_tolerance: 1.57
 
     FollowPath:
-      plugin: dwb_core::DWBLocalPlanner
-      debug_trajectory_details: False
-      min_vel_x: 0.0
-      max_vel_x: 0.40
-      min_vel_y: 0.0
-      max_vel_y: 0.0
-      max_vel_theta: 1.5
-      min_speed_xy: 0.0
-      max_speed_xy: 0.40
-      min_speed_theta: 0.0
-      acc_lim_x: 1.0
-      acc_lim_y: 0.0
-      acc_lim_theta: 1.0
-      decel_lim_x: -1.0
-      decel_lim_y: 0.0
-      decel_lim_theta: -1.0
-      vx_samples: 20
-      vy_samples: 1
-      vtheta_samples: 20
-      sim_time: 1.5
-      linear_granularity: 0.05
-      angular_granularity: 0.025
+      plugin: nav2_mppi_controller::MPPIController
+      # Core MPPI settings
+      time_steps: 56
+      model_dt: 0.05
+      batch_size: 2000
+      iteration_count: 1
+      prune_distance: 1.0
       transform_tolerance: 0.2
-      xy_goal_tolerance: 0.08
-      trans_stopped_velocity: 0.02
-      short_circuit_trajectory_evaluation: True
-      stateful: True
-      critics: [RotateToGoal, Oscillation, BaseObstacle, GoalAlign, PathAlign, PathDist, GoalDist]
-      BaseObstacle.scale: 0.02
-      PathAlign.scale: 32.0
-      PathAlign.forward_point_distance: 0.1
-      GoalAlign.scale: 24.0
-      GoalAlign.forward_point_distance: 0.1
-      PathDist.scale: 32.0
-      GoalDist.scale: 24.0
-      RotateToGoal.scale: 2.0
-      RotateToGoal.slowing_factor: 8.0
-      RotateToGoal.lookahead_time: -1.0
+      temperature: 0.3
+      gamma: 0.015
+
+      # Robot limits (match the prior DWB limits)
+      vx_max: 0.40
+      vx_min: 0.0
+      vy_max: 0.0
+      wz_max: 1.5
+      ax_max: 1.0
+      ax_min: -1.0
+      ay_max: 0.0
+      az_max: 1.0
+
+      # Noise for control sampling
+      vx_std: 0.2
+      vy_std: 0.0
+      wz_std: 0.6
+
+      # Goal tolerances
+      goal_dist_tol: 0.08
+      goal_ang_tol: 1.57
+
+      # Motion model
+      motion_model: DiffDrive
+
+      # Critic weights
+      critics: [GoalCritic, PathAlignCritic, PathFollowCritic, PathAngleCritic, ObstaclesCritic]
+      GoalCritic.scale: 5.0
+      PathAlignCritic.scale: 14.0
+      PathAlignCritic.forward_point_distance: 0.1
+      PathFollowCritic.scale: 10.0
+      PathAngleCritic.scale: 2.0
+      ObstaclesCritic.scale: 1.0
 
 local_costmap:
   local_costmap:

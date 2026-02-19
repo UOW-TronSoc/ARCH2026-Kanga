@@ -7,7 +7,8 @@
   <joint name="base_link_to_kangacore" type="fixed">
     <parent link="base_link"/>
     <child link="kangacore"/>
-    <origin xyz="0.55486398 0.44572500 0.39697" rpy="0 0 1.5708"/>
+    <!-- <origin xyz="0.55486398 0.44572500 0.39697" rpy="0 0 1.5708"/> -->
+    <origin xyz="0.0 0.0 0.39697" rpy="0 0 1.5708"/>
   </joint>
   <!-- Link kangacore -->
   <link name="kangacore">
@@ -20,7 +21,7 @@
     <visual>
       <origin xyz="-9.71445e-17 0.0406693 2.08167e-16" rpy="0 -0 0"/>
       <geometry>
-        <mesh filename="file:///home/hunter/gazebo_ws/src/kanga_sim/urdf/kangacore.stl"/>
+        <mesh filename="file:///home/hunter/kanga/src/kanga_sim/urdf/kangacore.stl"/>
       </geometry>
       <material name="kangacore_material">
         <color rgba="0.917647 0.917647 0.917647 1"/>
@@ -29,7 +30,7 @@
     <!-- <collision>
       <origin xyz="-9.71445e-17 0.0406693 2.08167e-16" rpy="0 -0 0"/>
       <geometry>
-        <mesh filename="file:///home/hunter/gazebo_ws/src/kanga_sim/urdf/kangacore.stl"/>
+        <mesh filename="file:///home/hunter/kanga/src/kanga_sim/urdf/kangacore.stl"/>
       </geometry>
     </collision> -->
     <collision>
@@ -50,7 +51,7 @@
     <visual>
       <origin xyz="5.55112e-17 0 -0.05" rpy="-1.5708 9.3268e-33 1.56432e-46"/>
       <geometry>
-        <mesh filename="file:///home/hunter/gazebo_ws/src/kanga_sim/urdf/wheelb.stl"/>
+        <mesh filename="file:///home/hunter/kanga/src/kanga_sim/urdf/wheelb.stl"/>
       </geometry>
       <material name="wheelb_material">
         <color rgba="0.929412 0.0392157 0 1"/>
@@ -59,7 +60,7 @@
     <!-- <collision>
       <origin xyz="5.55112e-17 0 -0.05" rpy="-1.5708 9.3268e-33 1.56432e-46"/>
       <geometry>
-        <mesh filename="file:///home/hunter/gazebo_ws/src/kanga_sim/urdf/wheelb.stl"/>
+        <mesh filename="file:///home/hunter/kanga/src/kanga_sim/urdf/wheelb.stl"/>
       </geometry>
     </collision> -->
     <collision>
@@ -88,7 +89,7 @@
     <visual>
       <origin xyz="0 -5.55112e-17 -0.05" rpy="-1.5708 -3.2996e-32 -1.75162e-46"/>
       <geometry>
-        <mesh filename="file:///home/hunter/gazebo_ws/src/kanga_sim/urdf/wheel_a.stl"/>
+        <mesh filename="file:///home/hunter/kanga/src/kanga_sim/urdf/wheel_a.stl"/>
       </geometry>
       <material name="wheel_a_material">
         <color rgba="0.929412 0.0392157 0 1"/>
@@ -97,7 +98,7 @@
     <!-- <collision>
       <origin xyz="0 -5.55112e-17 -0.05" rpy="-1.5708 -3.2996e-32 -1.75162e-46"/>
       <geometry>
-        <mesh filename="file:///home/hunter/gazebo_ws/src/kanga_sim/urdf/wheel_a.stl"/>
+        <mesh filename="file:///home/hunter/kanga/src/kanga_sim/urdf/wheel_a.stl"/>
       </geometry>
     </collision> -->
     <collision>
@@ -126,7 +127,7 @@
     <visual>
       <origin xyz="0 5.55112e-17 -0.05" rpy="-1.5708 -7.57665e-32 -3.26264e-46"/>
       <geometry>
-        <mesh filename="file:///home/hunter/gazebo_ws/src/kanga_sim/urdf/wheelb.stl"/>
+        <mesh filename="file:///home/hunter/kanga/src/kanga_sim/urdf/wheelb.stl"/>
       </geometry>
       <material name="wheelb_2_material">
         <color rgba="0.929412 0.0392157 0 1"/>
@@ -135,7 +136,7 @@
     <!-- <collision>
       <origin xyz="0 5.55112e-17 -0.05" rpy="-1.5708 -7.57665e-32 -3.26264e-46"/>
       <geometry>
-        <mesh filename="file:///home/hunter/gazebo_ws/src/kanga_sim/urdf/wheelb.stl"/>
+        <mesh filename="file:///home/hunter/kanga/src/kanga_sim/urdf/wheelb.stl"/>
       </geometry>
     </collision> -->
     <collision>
@@ -164,7 +165,7 @@
     <visual>
       <origin xyz="0 0 -0.05" rpy="-1.5708 1.4873e-44 0"/>
       <geometry>
-        <mesh filename="file:///home/hunter/gazebo_ws/src/kanga_sim/urdf/wheel_a.stl"/>
+        <mesh filename="file:///home/hunter/kanga/src/kanga_sim/urdf/wheel_a.stl"/>
       </geometry>
       <material name="wheel_a_2_material">
         <color rgba="0.929412 0.0392157 0 1"/>
@@ -173,7 +174,7 @@
     <!-- <collision>
       <origin xyz="0 0 -0.05" rpy="-1.5708 1.4873e-44 0"/>
       <geometry>
-        <mesh filename="file:///home/hunter/gazebo_ws/src/kanga_sim/urdf/wheel_a.stl"/>
+        <mesh filename="file:///home/hunter/kanga/src/kanga_sim/urdf/wheel_a.stl"/>
       </geometry>
     </collision> -->
     <collision>
@@ -193,39 +194,39 @@
   </joint>
 
   <gazebo reference="wheelb">
-    <mu1>1.6</mu1>
-    <mu2>1.6</mu2>
-    <kp>650000.0</kp>
+    <mu1>3.0</mu1>
+    <mu2>3.0</mu2>
+    <kp>750000.0</kp>
     <kd>200.0</kd>
-    <slip1>0.15</slip1>
-    <slip2>0.25</slip2>
+    <slip1>0.05</slip1>
+    <slip2>0.15</slip2>
   </gazebo>
 
   <gazebo reference="wheel_a">
-    <mu1>1.6</mu1>
-    <mu2>1.6</mu2>
-    <kp>650000.0</kp>
+    <mu1>3.0</mu1>
+    <mu2>3.0</mu2>
+    <kp>750000.0</kp>
     <kd>200.0</kd>
-    <slip1>0.15</slip1>
-    <slip2>0.25</slip2>
+    <slip1>0.05</slip1>
+    <slip2>0.15</slip2>
   </gazebo>`
 
   <gazebo reference="wheelb_2">
-    <mu1>1.6</mu1>
-    <mu2>1.6</mu2>
-    <kp>650000.0</kp>
+    <mu1>3.0</mu1>
+    <mu2>3.0</mu2>
+    <kp>750000.0</kp>
     <kd>200.0</kd>
-    <slip1>0.15</slip1>
-    <slip2>0.25</slip2>
+    <slip1>0.05</slip1>
+    <slip2>0.15</slip2>
   </gazebo>
 
   <gazebo reference="wheel_a_2">
-    <mu1>1.6</mu1>
-    <mu2>1.6</mu2>
-    <kp>650000.0</kp>
+    <mu1>3.0</mu1>
+    <mu2>3.0</mu2>
+    <kp>750000.0</kp>
     <kd>200.0</kd>
-    <slip1>0.15</slip1>
-    <slip2>0.25</slip2>
+    <slip1>0.05</slip1>
+    <slip2>0.15</slip2>
   </gazebo>
 
   <gazebo reference="kangacore">
