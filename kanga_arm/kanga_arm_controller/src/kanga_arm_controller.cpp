@@ -60,6 +60,7 @@ public:
 
 		// Initialize published endpoint with the best available estimate.
 		endpoint_position = forwardKinematics(joint_position);
+		desired_world_position_ = endpoint_position;
 
 		// Encoder/state feedback subscription.
 		joint_state_sub_ = this->create_subscription<sensor_msgs::msg::JointState>(
@@ -121,6 +122,9 @@ private:
 			std::lock_guard<std::mutex> lock(command_mutex_);
 			reference_world_velocity = reference_world_velocity_;
 		}
+
+		const double dt = static_cast<double>(control_time_step_ms) * 1e-3;
+		desired_world_position_ += reference_world_velocity.head<3>() * dt;
 
 		const Eigen::MatrixXd jacobian = computeJacobian(joint_position);
 		const Eigen::MatrixXd jacobian_pinv = pseudoInverse(jacobian, 1e-4);
@@ -258,6 +262,7 @@ private:
 	Eigen::VectorXd joint_position;   // Joint positions [rad], size `dof`.
 	Eigen::VectorXd joint_velocity;   // Joint velocities [rad/s], size `dof`.
 	Eigen::Vector3d endpoint_position; // End-effector Cartesian position [m].
+	Eigen::Vector3d desired_world_position_; // Integrated desired Cartesian position [m].
 
 	// Cached desired command from kanga_arm/world_state_control.
 	Eigen::VectorXd reference_world_velocity_;  // Reference world velocity [m/s, rad/s], size 6.
