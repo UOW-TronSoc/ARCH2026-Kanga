@@ -35,20 +35,6 @@ def generate_launch_description():
         'simulation.yaml'
         )
     
-    # Foxglove as a Node with quiet logging and no rosout publisher
-    # foxglove = Node(
-    #     package="foxglove_bridge",
-    #     executable="foxglove_bridge",
-    #     name="foxglove_bridge_1",          # unique name avoids duplicate logger warning
-    #     output="log",                      # logs go to ~/.ros/log instead of console
-    #     parameters=[{"port": 8765}],
-    #     arguments=[
-    #         "--ros-args",
-    #         "--log-level", "warn",
-    #         "--disable-rosout-logs"        # do not publish to /rosout
-    #     ],
-    # )
-
     # Setup raisim node
     raisim_node = Node(
         package="kanga_arm_simulation",
@@ -63,11 +49,23 @@ def generate_launch_description():
         ]
     )
 
-    # Setup control node
+    # # Setup control node
+    # control_node = Node(
+    #     package="kanga_arm_controller",
+    #     executable="joint_control_relay_node",
+    #     name="kanga_arm_joint_control_relay",
+    #     output="screen",
+    #     parameters=[
+    #         kanga_arm_config,
+    #         operation_params,
+    #     ]
+    # )
+
+        # Setup control node
     control_node = Node(
         package="kanga_arm_controller",
-        executable="joint_control_relay_node",
-        name="kanga_arm_joint_control_relay",
+        executable="control_node",
+        name="control_node",
         output="screen",
         parameters=[
             kanga_arm_config,
