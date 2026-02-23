@@ -1,0 +1,62 @@
+# Waypoint operation sequence for `ros2 run kanga_nav2 send_waypoints`
+#
+# Top-level:
+# - operations: ordered list of actions to execute in sequence.
+#
+# Supported operation types:
+# - type: goto
+#   - x: required, map-frame X position in meters.
+#   - y: required, map-frame Y position in meters.
+#
+# - type: spin
+#   - degrees: optional, relative rotation amount in degrees.
+#              Positive = CCW, negative = CW.
+#              Default: 360.0 if omitted.
+#   - time_allowance_sec: optional timeout for spin action.
+#                         Default: 30.0.
+#
+# - type: face_yaw
+#   - target_yaw_deg: required, absolute map-frame heading in degrees.
+#                     0 = +X direction, 90 = +Y direction.
+#   - time_allowance_sec: optional timeout for face-yaw action.
+#                         Default: 30.0.
+#
+# Notes:
+# - The loader still accepts legacy keys (`radians`, `target_yaw_rad`),
+#   but prefer degree-based keys in this file.
+operations:
+  - type: goto
+    # Map-frame target position (meters)
+    x: 5.0
+    y: 5.0
+
+  - type: spin
+    # Relative rotation (degrees)
+    degrees: 360.0
+    # Timeout for this operation (seconds)
+    time_allowance_sec: 30.0
+#PEE PEE POO POO
+  - type: goto
+    x: 20.0 
+    y: 5.0
+
+  - type: spin
+    degrees: 360.0
+    time_allowance_sec: 30.0
+
+  - type: goto
+    x: 20.0
+    y: 15.0
+
+  - type: face_yaw
+    # Absolute heading in map frame (degrees)
+    target_yaw_deg: 0.0
+    time_allowance_sec: 30.0
+
+  - type: goto
+    x: 5.0
+    y: 15.0
+
+  - type: spin
+    degrees: 360.0
+    time_allowance_sec: 30.0
