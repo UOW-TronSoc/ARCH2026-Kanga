@@ -3,12 +3,12 @@
 # Feeds that don't exist (device not present) are automatically skipped.
 # Note: Use odd-numbered devices (video1, video3, video5...) for actual capture
 cameras:
-  - video_id: 5
+  - video_id: 4
     name: back
-    fps: 30
-  - video_id: 3
+    fps: 15
+  - video_id: 2
     name: top
-    fps: 30
+    fps: 15
   # - video_id: 1
   #   name: front
   #   fps: 15
