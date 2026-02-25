@@ -1,0 +1,14 @@
+# Camera config: video_id -> /dev/video{id}, name -> topic /camera/{name}
+# fps: publish rate in Hz (optional, defaults to 30)
+# Feeds that don't exist (device not present) are automatically skipped.
+# Note: Use odd-numbered devices (video1, video3, video5...) for actual capture
+cameras:
+  - video_id: 5
+    name: back
+    fps: 30
+  - video_id: 3
+    name: top
+    fps: 30
+  # - video_id: 1
+  #   name: front
+  #   fps: 15

@@ -2,8 +2,8 @@
 #define DALY_CAN_NODE_HPP
 
 #include <rclcpp/rclcpp.hpp>
-#include "kanga_battery/msg/battery_info.hpp"
-#include "kanga_battery/msg/bms_status.hpp"
+#include "kanga_interfaces/msg/battery_info.hpp"
+#include "kanga_interfaces/msg/bms_status.hpp"
 #include "kanga_canbus/socket_can.hpp"
 
 #include <mutex>
@@ -18,8 +18,8 @@ using std::placeholders::_1;
 using std::placeholders::_2;
 
 // Aliases for the custom message types to make code shorter and clearer.
-using BatteryInfo = kanga_battery::msg::BatteryInfo;
-using BMSStatus   = kanga_battery::msg::BmsStatus;
+using BatteryInfo = kanga_interfaces::msg::BatteryInfo;
+using BMSStatus   = kanga_interfaces::msg::BmsStatus;
 
 // -----------------------------------------------------------------------------
 // DalyCanNode

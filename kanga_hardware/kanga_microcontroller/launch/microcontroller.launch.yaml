@@ -1,0 +1,32 @@
+launch:
+
+- node:
+    pkg: "kanga_microcontroller"
+    exec: "microcontroller_can_node"
+    name: "can_bridge"
+    namespace: "microcontroller"
+    param:
+    -
+      name: "interface"
+      value: "can1"
+    -
+      name: "node_id"
+      value: 1
+    -
+      name: "node_id_mask"
+      value: 65535
+    -
+      name: "node_id_shift"
+      value: 0
+    -
+      name: "tx_base_id"
+      value: 0
+    -
+      name: "expect_extended_id"
+      value: true
+    -
+      name: "force_extended_tx"
+      value: true
+    -
+      name: "allow_tx_id_override"
+      value: true
