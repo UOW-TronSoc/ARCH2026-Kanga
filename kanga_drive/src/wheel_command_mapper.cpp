@@ -418,7 +418,7 @@ private:
 
         kanga_interfaces::msg::ControlMessage ctrl;
         ctrl.control_mode = 2;
-        ctrl.input_mode   = 1;
+        ctrl.input_mode   = 2;
         ctrl.input_pos    = 0.0F;
 
         const size_t count = std::min(ctrl_publishers_.size(), cmds.size());

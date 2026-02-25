@@ -15,7 +15,8 @@ def generate_launch_description() -> LaunchDescription:
                 'launch',
                 'keyboard_joy.launch.py',
             )
-        )
+        ),
+        launch_arguments={'device': '/dev/input/event1'}.items(),
     )
 
     joy_to_twist_node = Node(
