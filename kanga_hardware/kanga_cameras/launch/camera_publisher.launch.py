@@ -37,7 +37,15 @@ def generate_launch_description() -> LaunchDescription:
     zed_launch_path = os.path.join(zed_wrapper_share, "launch", "zed_camera.launch.py")
     zed_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(zed_launch_path),
-        launch_arguments={"camera_model": "zed2i"}.items(),
+        #launch_arguments={"camera_model": "zed2i"}.items(),
+        launch_arguments={'camera_model': "zed2i",
+            'publish_map_tf': 'false',
+            "publish_tf": "false",
+            "publish_odom_tf": "false",
+            "publish_imu_tf": "true",
+            }.items(),
+
+
     )
     actions.append(zed_launch)
     # except PackageNotFoundError:
