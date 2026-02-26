@@ -1,13 +1,13 @@
 <?xml version="1.0" ?>
-<robot name="UniLidarL2_macro" xmlns:xacro="http://www.ros.org/wiki/xacro">
+<robot name="unilidarl2_macro" xmlns:xacro="http://www.ros.org/wiki/xacro">
   <!-- Reusable lidar component.
        Params:
        - parent: link this sensor mounts to
        - xyz/rpy: pose of the lidar relative to parent
        - prefix: optional name prefix to avoid link/joint collisions -->
-  <xacro:macro name="unilidar_l2" params="parent xyz:='0 0 0' rpy:='0 0 0' prefix:=''">
+  <xacro:macro name="unilidarl2" params="parent xyz:='0 0 0' rpy:='0 0 0' prefix:=''">
     <!-- Mount joint from caller-provided parent to lidar base. -->
-    <joint name="${prefix}UniLidarL2_mount_joint" type="fixed">
+    <joint name="${prefix}unilidarl2_mount_joint" type="fixed">
       <origin xyz="${xyz}" rpy="${rpy}"/>
       <parent link="${parent}"/>
       <child link="${prefix}unilidarl2_base"/>
@@ -26,7 +26,7 @@
         <geometry>
           <mesh filename="package://kanga_description/urdf/sensors/UniLidarL2/meshes/unilidarl2_base.stl"/>
         </geometry>
-        <material name="unilidarl2base_material">
+        <material name="unilidarl2_base_material">
           <color rgba="0.301961 0.301961 0.301961 1"/>
         </material>
       </visual>
@@ -50,7 +50,7 @@
         <geometry>
           <mesh filename="package://kanga_description/urdf/sensors/UniLidarL2/meshes/unilidarl2_top.stl"/>
         </geometry>
-        <material name="unilidarl2top_material">
+        <material name="unilidarl2_top_material">
           <color rgba="0.215686 0.215686 0.215686 1"/>
         </material>
       </visual>
@@ -63,7 +63,7 @@
     </link>
 
     <!-- Spin joint from base to top cap (currently constrained by limits). -->
-    <joint name="${prefix}LidarTop" type="revolute">
+    <joint name="${prefix}unilidarl2_top_joint" type="revolute">
       <origin xyz="-0 0 0.0214" rpy="0 -0 0"/>
       <parent link="${prefix}unilidarl2_base"/>
       <child link="${prefix}unilidarl2_top"/>

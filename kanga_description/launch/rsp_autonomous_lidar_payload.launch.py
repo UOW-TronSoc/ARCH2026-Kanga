@@ -1,6 +1,7 @@
 from launch import LaunchDescription
 from launch_ros.actions import Node
 from ament_index_python.packages import PackageNotFoundError, get_package_share_directory
+from launch_ros.parameter_descriptions import ParameterValue
 import os
 from launch.substitutions import Command, FindExecutable
 
@@ -12,7 +13,9 @@ def generate_launch_description():
     )
     rviz_config_path = os.path.join(pkg_share, "rviz", "rsp_autonomous_lidar_payload.rviz")
 
-    robot_description = Command([FindExecutable(name="xacro"), " ", xacro_path])
+    robot_description = ParameterValue(
+        Command([FindExecutable(name="xacro"), " ", xacro_path]), value_type=str
+    )
 
     nodes = [
         Node(

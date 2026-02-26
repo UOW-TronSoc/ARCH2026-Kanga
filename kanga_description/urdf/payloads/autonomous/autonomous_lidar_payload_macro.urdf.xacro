@@ -10,7 +10,7 @@
        - prefix: optional name prefix for multi-instance safety -->
   <xacro:macro name="autonomous_lidar_payload" params="parent xyz:='0 0 0' rpy:='0 0 0' prefix:=''">
     <!-- Mount payload body to caller-provided parent link. -->
-    <joint name="${prefix}autonomous_payload_mount_joint" type="fixed">
+    <joint name="${prefix}autonomous_lidar_payload_mount_joint" type="fixed">
       <origin xyz="${xyz}" rpy="${rpy}"/>
       <parent link="${parent}"/>
       <child link="${prefix}autonomous_lidar_mount"/>
@@ -57,6 +57,6 @@
     </joint>
 
     <!-- Attach reusable UniLidarL2 model at the payload's lidar mount frame. -->
-    <xacro:unilidar_l2 parent="${prefix}unilidarl2_mount" prefix="${prefix}"/>
+    <xacro:unilidarl2 parent="${prefix}unilidarl2_mount" prefix="${prefix}"/>
   </xacro:macro>
 </robot>

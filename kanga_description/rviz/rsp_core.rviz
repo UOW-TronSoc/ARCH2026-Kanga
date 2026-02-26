@@ -83,22 +83,22 @@ Visualization Manager:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-        wheel_a:
+        wheel_bl:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        wheel_a_2:
+        wheel_fr:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        wheelb:
+        wheel_fl:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        wheelb_2:
+        wheel_br:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -124,13 +124,13 @@ Visualization Manager:
           Value: true
         top_payload_mount:
           Value: true
-        wheel_a:
+        wheel_bl:
           Value: true
-        wheel_a_2:
+        wheel_fr:
           Value: true
-        wheelb:
+        wheel_fl:
           Value: true
-        wheelb_2:
+        wheel_br:
           Value: true
       Marker Scale: 1
       Name: TF
@@ -144,13 +144,13 @@ Visualization Manager:
               {}
             top_payload_mount:
               {}
-            wheel_a:
+            wheel_bl:
               {}
-            wheel_a_2:
+            wheel_fr:
               {}
-            wheelb:
+            wheel_fl:
               {}
-            wheelb_2:
+            wheel_br:
               {}
       Update Interval: 0
       Value: true

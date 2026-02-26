@@ -1,19 +1,21 @@
 <?xml version="1.0" ?>
 <robot name="kanga_core_macro" xmlns:xacro="http://www.ros.org/wiki/xacro">
   <!-- Reusable rover core model.
-       This macro defines the complete base chassis, payload mount frames, and wheels. -->
-  <xacro:macro name="kanga_core" params="">
+       This macro defines the complete base chassis, payload mount frames, and wheels.
+       Params:
+       - prefix: optional name prefix to avoid link/joint collisions -->
+  <xacro:macro name="kanga_core" params="prefix:=''">
   <!-- Base/root frame for full rover assemblies. -->
-  <link name="base_link"/>
+  <link name="${prefix}base_link"/>
 
-  <joint name="base_link_to_kangacore" type="fixed">
-    <parent link="base_link"/>
-    <child link="kanga_core"/>
+  <joint name="${prefix}base_link_to_kanga_core" type="fixed">
+    <parent link="${prefix}base_link"/>
+    <child link="${prefix}kanga_core"/>
     <!-- <origin xyz="0.55486398 0.44572500 0.39697" rpy="0 0 1.5708"/> -->
     <origin xyz="0.0 0.0 0.39697" rpy="0 0 0"/>
   </joint>
   <!-- Main chassis body geometry + inertial properties. -->
-  <link name="kanga_core">
+  <link name="${prefix}kanga_core">
     <inertial>
       <origin xyz="-0.0394422 -0.0149606 -0.0298892" rpy="0 0 0"/>
       <mass value="28"/>
@@ -37,36 +39,36 @@
     </collision>
   </link>
   <!-- Top payload interface frame used by payload assemblies. -->
-  <link name="top_payload_mount">
+  <link name="${prefix}top_payload_mount">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <mass value="1e-9"/>
       <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
     </inertial>
   </link>
-  <joint name="top_payload_mount_frame" type="fixed">
+  <joint name="${prefix}top_payload_mount_frame" type="fixed">
     <origin xyz="0.379844 -0.1575 0.1216" rpy="0 -0 0"/>
-    <parent link="kanga_core"/>
-    <child link="top_payload_mount"/>
+    <parent link="${prefix}kanga_core"/>
+    <child link="${prefix}top_payload_mount"/>
     <axis xyz="0 0 0"/>
   </joint>
   <!-- Front payload interface frame used by payload assemblies. -->
-  <link name="front_payload_mount">
+  <link name="${prefix}front_payload_mount">
     <inertial>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <mass value="1e-9"/>
       <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
     </inertial>
   </link>
-  <joint name="front_payload_mount_frame" type="fixed">
+  <joint name="${prefix}front_payload_mount_frame" type="fixed">
     <origin xyz="0.158499 -0 0.0116" rpy="0 -0 0"/>
-    <parent link="kanga_core"/>
-    <child link="front_payload_mount"/>
+    <parent link="${prefix}kanga_core"/>
+    <child link="${prefix}front_payload_mount"/>
     <axis xyz="0 0 0"/>
   </joint>
   <!-- Drive wheel links and joints. -->
-  <!-- Link wheel_FL -->
-  <link name="wheel_FL">
+  <!-- Link wheel_fl -->
+  <link name="${prefix}wheel_fl">
     <inertial>
       <origin xyz="8.20141e-07 4.19108e-07 0.0294338" rpy="0 0 0"/>
       <mass value="0.7"/>
@@ -89,16 +91,16 @@
       </geometry>
     </collision>
   </link>
-  <!-- Joint from kanga_core to wheel_FL -->
-  <joint name="wheel1" type="continuous">
+  <!-- Joint from kanga_core to wheel_fl -->
+  <joint name="${prefix}wheel_fl_joint" type="continuous">
     <origin xyz="0.428413 0.395775 -0.271989" rpy="1.5708 0 0"/>
-    <parent link="kanga_core"/>
-    <child link="wheel_FL"/>
+    <parent link="${prefix}kanga_core"/>
+    <child link="${prefix}wheel_fl"/>
     <axis xyz="0 0 1"/>
     <limit effort="40" velocity="4.61"/>
   </joint>
-  <!-- Link wheel_BL -->
-  <link name="wheel_BL">
+  <!-- Link wheel_bl -->
+  <link name="${prefix}wheel_bl">
     <inertial>
       <origin xyz="1.69548e-06 -4.25166e-07 0.0294802" rpy="0 0 0"/>
       <mass value="0.7"/>
@@ -121,16 +123,16 @@
       </geometry>
     </collision>
   </link>
-  <!-- Joint from kanga_core to wheel_BL -->
-  <joint name="wheel2" type="continuous">
+  <!-- Joint from kanga_core to wheel_bl -->
+  <joint name="${prefix}wheel_bl_joint" type="continuous">
     <origin xyz="-0.430143 0.395775 -0.272479" rpy="1.5708 0 -0"/>
-    <parent link="kanga_core"/>
-    <child link="wheel_BL"/>
+    <parent link="${prefix}kanga_core"/>
+    <child link="${prefix}wheel_bl"/>
     <axis xyz="0 0 1"/>
     <limit effort="40" velocity="4.61"/>
   </joint>
-  <!-- Link wheel_BR -->
-  <link name="wheel_BR">
+  <!-- Link wheel_br -->
+  <link name="${prefix}wheel_br">
     <inertial>
       <origin xyz="8.20141e-07 4.19108e-07 0.0294338" rpy="0 0 0"/>
       <mass value="0.7"/>
@@ -153,16 +155,16 @@
       </geometry>
     </collision>
   </link>
-  <!-- Joint from kanga_core to wheel_BR -->
-  <joint name="wheel3" type="continuous">
+  <!-- Joint from kanga_core to wheel_br -->
+  <joint name="${prefix}wheel_br_joint" type="continuous">
     <origin xyz="-0.430143 -0.395725 -0.272479" rpy="1.5708 0 -3.14159"/>
-    <parent link="kanga_core"/>
-    <child link="wheel_BR"/>
+    <parent link="${prefix}kanga_core"/>
+    <child link="${prefix}wheel_br"/>
     <axis xyz="0 0 1"/>
     <limit effort="40" velocity="4.61"/>
   </joint>
-  <!-- Link wheel_FR -->
-  <link name="wheel_FR">
+  <!-- Link wheel_fr -->
+  <link name="${prefix}wheel_fr">
     <inertial>
       <origin xyz="1.69548e-06 -4.25166e-07 0.0294802" rpy="0 0 0"/>
       <mass value="0.7"/>
@@ -185,11 +187,11 @@
       </geometry>
     </collision>
   </link>
-  <!-- Joint from kanga_core to wheel_FR -->
-  <joint name="wheel4" type="continuous">
+  <!-- Joint from kanga_core to wheel_fr -->
+  <joint name="${prefix}wheel_fr_joint" type="continuous">
     <origin xyz="0.428413 -0.395725 -0.271989" rpy="1.5708 -0 -3.14159"/>
-    <parent link="kanga_core"/>
-    <child link="wheel_FR"/>
+    <parent link="${prefix}kanga_core"/>
+    <child link="${prefix}wheel_fr"/>
     <axis xyz="0 0 1"/>
     <limit effort="40" velocity="4.61"/>
   </joint>
