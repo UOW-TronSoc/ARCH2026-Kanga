@@ -66,11 +66,15 @@ Visualization Manager:
         Expand Link Details: false
         Expand Tree: false
         Link Tree Style: Links in Alphabetic Order
-        unilidarl2_mount:
+        zed_camera_mount:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-        autonomous_lidar_mount:
+        zed_camera_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        autonomous_zed_mount:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -88,9 +92,11 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: true
-        unilidarl2_mount:
+        zed_camera_mount:
           Value: true
-        autonomous_lidar_mount:
+        zed_camera_link:
+          Value: true
+        autonomous_zed_mount:
           Value: true
       Marker Scale: 1
       Name: TF
@@ -98,15 +104,16 @@ Visualization Manager:
       Show Axes: true
       Show Names: false
       Tree:
-        autonomous_lidar_mount:
-          unilidarl2_mount:
-            {}
+        autonomous_zed_mount:
+          zed_camera_mount:
+            zed_camera_link:
+              {}
       Update Interval: 0
       Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: autonomous_lidar_mount
+    Fixed Frame: autonomous_zed_mount
     Frame Rate: 30
   Name: root
   Tools:

@@ -1,0 +1,8 @@
+{
+  "url": "https://tronsoc.onshape.com/documents/a04fc62c100c90ae88802972/w/c0a63c4f09140e5b63a1ee94/e/659a7a2b75f230d3e19a7407",
+  "output_format": "urdf",
+  "output_filename": "autonomous_zed_payload",
+  "assets_directory": "assets_autonomous_zed_payload",
+  "assembly_name": "autonomous_zed_payload",
+  "package_name": "kanga_description"
+}

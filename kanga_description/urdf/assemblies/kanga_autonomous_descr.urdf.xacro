@@ -1,12 +1,15 @@
 <?xml version="1.0" ?>
 <robot name="kanga_autonomous" xmlns:xacro="http://www.ros.org/wiki/xacro">
   <!-- Top-level assembly:
-       combine base rover core + autonomous lidar payload. -->
+       combine base rover core + autonomous payloads. -->
   <xacro:include filename="$(find kanga_description)/urdf/core/kanga_core_macro.urdf.xacro"/>
   <xacro:include filename="$(find kanga_description)/urdf/payloads/autonomous/autonomous_lidar_payload_macro.urdf.xacro"/>
+  <xacro:include filename="$(find kanga_description)/urdf/payloads/autonomous/autonomous_zed_payload_macro.urdf.xacro"/>
 
   <!-- Build the rover base model first. -->
   <xacro:kanga_core/>
-  <!-- Mount autonomous payload onto the core's top payload mount frame. -->
+  <!-- Mount autonomous lidar payload onto the core's top payload mount frame. -->
   <xacro:autonomous_lidar_payload parent="top_payload_mount"/>
+  <!-- Mount autonomous ZED payload onto the core's front payload mount frame. -->
+  <xacro:autonomous_zed_payload parent="front_payload_mount"/>
 </robot>

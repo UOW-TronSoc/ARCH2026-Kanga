@@ -30,7 +30,7 @@
           <mesh filename="package://kanga_description/meshes/payloads/auto/autonomous_lidar_mount.stl"/>
         </geometry>
         <material name="autonomous_lidar_mount_material">
-          <color rgba="0.231373 0.380392 0.705882 1"/>
+          <color rgba="0.5 0.5 0.5 1"/>
         </material>
       </visual>
       <collision>
