@@ -8,8 +8,10 @@ from launch.substitutions import Command, FindExecutable
 
 def generate_launch_description():
     pkg_share = get_package_share_directory("kanga_description")
-    xacro_path = os.path.join(pkg_share, "urdf", "assemblies", "kanga_autonomous.urdf.xacro")
-    rviz_config_path = os.path.join(pkg_share, "rviz", "rsp_core.rviz")
+    xacro_path = os.path.join(
+        pkg_share, "urdf", "payloads", "autonomous", "autonomous_lidar_payload.urdf.xacro"
+    )
+    rviz_config_path = os.path.join(pkg_share, "rviz", "rsp_autonomous_lidar_payload.rviz")
     xacro_available = shutil.which("xacro") is not None
 
     if xacro_available:
