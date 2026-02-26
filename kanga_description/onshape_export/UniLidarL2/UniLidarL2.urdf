@@ -2,59 +2,59 @@
 <!-- Generated using onshape-to-robot -->
 <!-- Onshape https://tronsoc.onshape.com/documents/a04fc62c100c90ae88802972/w/c0a63c4f09140e5b63a1ee94/e/1b56bc429f9cc3690af229f3 -->
 <robot name="UniLidarL2">
-  <!-- Link unilidarl2base -->
-  <link name="unilidarl2base">
+  <!-- Link unilidarl2_base -->
+  <link name="unilidarl2_base">
     <inertial>
       <origin xyz="6.88756e-05 4.86924e-06 0.00436145" rpy="0 0 0"/>
       <mass value="0.1"/>
       <inertia ixx="4.63963e-05" ixy="1.473e-09" ixz="9.141e-08" iyy="4.60192e-05" iyz="3.537e-09" izz="8.42575e-05"/>
     </inertial>
-    <!-- Part unilidarl2base -->
+    <!-- Part unilidarl2_base -->
     <visual>
       <origin xyz="-1.94934e-06 -0.53025 0.313234" rpy="3.14159 -0.349066 1.5708"/>
       <geometry>
-        <mesh filename="package://kanga_description/assets_UniLidarL2/unilidarl2base.stl"/>
+        <mesh filename="package://kanga_description/assets_UniLidarL2/unilidarl2_base.stl"/>
       </geometry>
-      <material name="unilidarl2base_material">
+      <material name="unilidarl2_base_material">
         <color rgba="0.301961 0.301961 0.301961 1"/>
       </material>
     </visual>
     <collision>
       <origin xyz="-1.94934e-06 -0.53025 0.313234" rpy="3.14159 -0.349066 1.5708"/>
       <geometry>
-        <mesh filename="package://kanga_description/assets_UniLidarL2/unilidarl2base.stl"/>
+        <mesh filename="package://kanga_description/assets_UniLidarL2/unilidarl2_base.stl"/>
       </geometry>
     </collision>
   </link>
-  <!-- Link unilidarl2top -->
-  <link name="unilidarl2top">
+  <!-- Link unilidarl2_top -->
+  <link name="unilidarl2_top">
     <inertial>
       <origin xyz="6.66489e-05 -2.74177e-06 0.0157604" rpy="0 0 0"/>
       <mass value="0.13"/>
       <inertia ixx="3.66094e-05" ixy="-1.075e-09" ixz="-9.3857e-08" iyy="5.78833e-05" iyz="-2.975e-09" izz="7.00661e-05"/>
     </inertial>
-    <!-- Part unilidarl2top -->
+    <!-- Part unilidarl2_top -->
     <visual>
       <origin xyz="-1.94934e-06 -0.53025 0.290634" rpy="3.14159 -0.349066 1.5708"/>
       <geometry>
-        <mesh filename="package://kanga_description/assets_UniLidarL2/unilidarl2top.stl"/>
+        <mesh filename="package://kanga_description/assets_UniLidarL2/unilidarl2_top.stl"/>
       </geometry>
-      <material name="unilidarl2top_material">
+      <material name="unilidarl2_top_material">
         <color rgba="0.215686 0.215686 0.215686 1"/>
       </material>
     </visual>
     <collision>
       <origin xyz="-1.94934e-06 -0.53025 0.290634" rpy="3.14159 -0.349066 1.5708"/>
       <geometry>
-        <mesh filename="package://kanga_description/assets_UniLidarL2/unilidarl2top.stl"/>
+        <mesh filename="package://kanga_description/assets_UniLidarL2/unilidarl2_top.stl"/>
       </geometry>
     </collision>
   </link>
-  <!-- Joint from unilidarl2base to unilidarl2top -->
+  <!-- Joint from unilidarl2_base to unilidarl2_top -->
   <joint name="LidarTop" type="revolute">
     <origin xyz="-0 0 0.0214" rpy="0 -0 0"/>
-    <parent link="unilidarl2base"/>
-    <child link="unilidarl2top"/>
+    <parent link="unilidarl2_base"/>
+    <child link="unilidarl2_top"/>
     <axis xyz="0 0 1"/>
     <limit effort="10" velocity="10" lower="0" upper="0"/>
   </joint>

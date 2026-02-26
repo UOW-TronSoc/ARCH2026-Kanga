@@ -1,13 +1,13 @@
 {
     "configuration": "default",
     "documentId": "a04fc62c100c90ae88802972",
-    "documentMicroversion": "b63e3f2c4e3cc0b7e2ccc9cb",
+    "documentMicroversion": "6b0a54d41e88f26f09d8030c",
     "elementId": "44e61b27de4c330924626110",
     "fullConfiguration": "default",
-    "id": "M2vO+C5j7RTBcySU8",
+    "id": "M36ATq9N9OAjkqKMF",
     "isStandardContent": false,
-    "name": "AutonomousLidarMount <1>",
-    "partId": "JGD",
+    "name": "unilidarl2_base <1>",
+    "partId": "JHD",
     "suppressed": false,
     "type": "Part"
 }

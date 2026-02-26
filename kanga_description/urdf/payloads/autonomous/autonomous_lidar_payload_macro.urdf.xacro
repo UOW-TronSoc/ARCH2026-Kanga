@@ -13,12 +13,12 @@
     <joint name="${prefix}autonomous_payload_mount_joint" type="fixed">
       <origin xyz="${xyz}" rpy="${rpy}"/>
       <parent link="${parent}"/>
-      <child link="${prefix}autonomouslidarmount"/>
+      <child link="${prefix}autonomous_lidar_mount"/>
       <axis xyz="0 0 0"/>
     </joint>
 
     <!-- Payload bracket geometry that bolts to rover top mount. -->
-    <link name="${prefix}autonomouslidarmount">
+    <link name="${prefix}autonomous_lidar_mount">
       <inertial>
         <origin xyz="-0.0301856 0.1575 0.184178" rpy="0 0 0"/>
         <mass value="0.4"/>
@@ -27,36 +27,36 @@
       <visual>
         <origin xyz="-0.420514 0.1575 -0.1216" rpy="-0 -0 0"/>
         <geometry>
-          <mesh filename="package://kanga_description/meshes/payloads/auto/autonomouslidarmount.stl"/>
+          <mesh filename="package://kanga_description/meshes/payloads/auto/autonomous_lidar_mount.stl"/>
         </geometry>
-        <material name="autonomouslidarmount_material">
-          <color rgba="0.5 0.5 0.5 1"/>
+        <material name="autonomous_lidar_mount_material">
+          <color rgba="0.231373 0.380392 0.705882 1"/>
         </material>
       </visual>
       <collision>
         <origin xyz="-0.420514 0.1575 -0.1216" rpy="-0 -0 0"/>
         <geometry>
-          <mesh filename="package://kanga_description/meshes/payloads/auto/autonomouslidarmount.stl"/>
+          <mesh filename="package://kanga_description/meshes/payloads/auto/autonomous_lidar_mount.stl"/>
         </geometry>
       </collision>
     </link>
 
     <!-- Lidar mounting frame exported from CAD for sensor placement. -->
-    <link name="${prefix}UniLidarL2Mount">
+    <link name="${prefix}unilidarl2_mount">
       <inertial>
         <origin xyz="0 0 0" rpy="0 0 0"/>
         <mass value="1e-9"/>
         <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
       </inertial>
     </link>
-    <joint name="${prefix}UniLidarL2Mount_frame" type="fixed">
+    <joint name="${prefix}unilidarl2_mount_frame" type="fixed">
       <origin xyz="-0.0300581 0.1575 0.355979" rpy="2.79253 -0 1.5708"/>
-      <parent link="${prefix}autonomouslidarmount"/>
-      <child link="${prefix}UniLidarL2Mount"/>
+      <parent link="${prefix}autonomous_lidar_mount"/>
+      <child link="${prefix}unilidarl2_mount"/>
       <axis xyz="0 0 0"/>
     </joint>
 
     <!-- Attach reusable UniLidarL2 model at the payload's lidar mount frame. -->
-    <xacro:unilidar_l2 parent="${prefix}UniLidarL2Mount" prefix="${prefix}"/>
+    <xacro:unilidar_l2 parent="${prefix}unilidarl2_mount" prefix="${prefix}"/>
   </xacro:macro>
 </robot>
