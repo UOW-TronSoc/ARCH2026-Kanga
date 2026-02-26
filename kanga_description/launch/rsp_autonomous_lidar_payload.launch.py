@@ -8,7 +8,7 @@ from launch.substitutions import Command, FindExecutable
 def generate_launch_description():
     pkg_share = get_package_share_directory("kanga_description")
     xacro_path = os.path.join(
-        pkg_share, "urdf", "payloads", "autonomous", "autonomous_lidar_payload.urdf.xacro"
+        pkg_share, "urdf", "payloads", "autonomous", "autonomous_lidar_payload_descr.urdf.xacro"
     )
     rviz_config_path = os.path.join(pkg_share, "rviz", "rsp_autonomous_lidar_payload.rviz")
 

@@ -7,7 +7,7 @@ from launch.substitutions import Command, FindExecutable
 
 def generate_launch_description():
     pkg_share = get_package_share_directory("kanga_description")
-    xacro_path = os.path.join(pkg_share, "urdf", "assemblies", "kanga_autonomous.urdf.xacro")
+    xacro_path = os.path.join(pkg_share, "urdf", "assemblies", "kanga_autonomous_descr.urdf.xacro")
     rviz_config_path = os.path.join(pkg_share, "rviz", "rsp_core.rviz")
 
     robot_description = Command([FindExecutable(name="xacro"), " ", xacro_path])
