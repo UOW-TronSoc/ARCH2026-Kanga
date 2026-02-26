@@ -1,0 +1,18 @@
+{
+  "url": "https://tronsoc.onshape.com/documents/1c492049a2e71feeba4bb134/w/b322db97232ca622375ccdbf/e/3271415db943d39f5acebee7",
+  "output_format": "urdf",
+  "output_filename": "kanga_core",
+  "assets_directory": "assets_kanga_core",
+  "assembly_name": "kanga_core",
+  "package_name": "rover_description",
+  "joint_properties": {
+    "default": {
+      "max_effort": 0.0,
+      "max_velocity": 0.0
+    },
+    "wheel1": { "type": "continuous" },
+    "wheel2": { "type": "continuous" },
+    "wheel3": { "type": "continuous" },
+    "wheel4": { "type": "continuous" }
+  }
+}
