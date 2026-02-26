@@ -1,0 +1,197 @@
+<?xml version="1.0" ?>
+<robot name="kanga_core_macro" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!-- Reusable rover core model.
+       This macro defines the complete base chassis, payload mount frames, and wheels. -->
+  <xacro:macro name="kanga_core" params="">
+  <!-- Base/root frame for full rover assemblies. -->
+  <link name="base_link"/>
+
+  <joint name="base_link_to_kangacore" type="fixed">
+    <parent link="base_link"/>
+    <child link="kanga_core"/>
+    <!-- <origin xyz="0.55486398 0.44572500 0.39697" rpy="0 0 1.5708"/> -->
+    <origin xyz="0.0 0.0 0.39697" rpy="0 0 0"/>
+  </joint>
+  <!-- Main chassis body geometry + inertial properties. -->
+  <link name="kanga_core">
+    <inertial>
+      <origin xyz="-0.0394422 -0.0149606 -0.0298892" rpy="0 0 0"/>
+      <mass value="28"/>
+      <inertia ixx="3.05326" ixy="-0.0953345" ixz="0.403632" iyy="4.37258" iyz="0.249778" izz="3.81615"/>
+    </inertial>
+    <!-- Part kangacore -->
+    <visual>
+      <origin xyz="-0.0406693 -0 0" rpy="0 -0 1.5708"/>
+      <geometry>
+        <mesh filename="package://kanga_description/meshes/core/kangacore.stl"/>
+      </geometry>
+      <material name="kangacore_material">
+        <color rgba="0.917647 0.917647 0.917647 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0406693 -0 0" rpy="0 -0 1.5708"/>
+      <geometry>
+        <mesh filename="package://kanga_description/meshes/core/kangacore.stl"/>
+      </geometry>
+    </collision>
+  </link>
+  <!-- Top payload interface frame used by payload assemblies. -->
+  <link name="top_payload_mount">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="1e-9"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+  </link>
+  <joint name="top_payload_mount_frame" type="fixed">
+    <origin xyz="0.379844 -0.1575 0.1216" rpy="0 -0 0"/>
+    <parent link="kanga_core"/>
+    <child link="top_payload_mount"/>
+    <axis xyz="0 0 0"/>
+  </joint>
+  <!-- Front payload interface frame used by payload assemblies. -->
+  <link name="front_payload_mount">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="1e-9"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+  </link>
+  <joint name="front_payload_mount_frame" type="fixed">
+    <origin xyz="0.158499 -0 0.0116" rpy="0 -0 0"/>
+    <parent link="kanga_core"/>
+    <child link="front_payload_mount"/>
+    <axis xyz="0 0 0"/>
+  </joint>
+  <!-- Drive wheel links and joints. -->
+  <!-- Link wheelb -->
+  <link name="wheelb">
+    <inertial>
+      <origin xyz="8.20141e-07 4.19108e-07 0.0294338" rpy="0 0 0"/>
+      <mass value="0.7"/>
+      <inertia ixx="0.00536519" ixy="2.6367e-08" ixz="3.55462e-07" iyy="0.00536521" iyz="7.378e-09" izz="0.00759451"/>
+    </inertial>
+    <!-- Part wheelb -->
+    <visual>
+      <origin xyz="0 0 -0.05" rpy="-1.5708 -0 0"/>
+      <geometry>
+        <mesh filename="package://kanga_description/meshes/core/wheelb.stl"/>
+      </geometry>
+      <material name="wheelb_material">
+        <color rgba="0.929412 0.0392157 0 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 -0.05" rpy="-1.5708 -0 0"/>
+      <geometry>
+        <mesh filename="package://kanga_description/meshes/core/wheelb.stl"/>
+      </geometry>
+    </collision>
+  </link>
+  <!-- Joint from kanga_core to wheelb -->
+  <joint name="wheel1" type="continuous">
+    <origin xyz="0.428413 0.395775 -0.271989" rpy="1.5708 0 0"/>
+    <parent link="kanga_core"/>
+    <child link="wheelb"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="40" velocity="4.61"/>
+  </joint>
+  <!-- Link wheel_a -->
+  <link name="wheel_a">
+    <inertial>
+      <origin xyz="1.69548e-06 -4.25166e-07 0.0294802" rpy="0 0 0"/>
+      <mass value="0.7"/>
+      <inertia ixx="0.0053658" ixy="2.7862e-08" ixz="3.79976e-07" iyy="0.00536582" iyz="-5.263e-09" izz="0.00759416"/>
+    </inertial>
+    <!-- Part wheel_a -->
+    <visual>
+      <origin xyz="0 0 -0.05" rpy="-1.5708 0 0"/>
+      <geometry>
+        <mesh filename="package://kanga_description/meshes/core/wheel_a.stl"/>
+      </geometry>
+      <material name="wheel_a_material">
+        <color rgba="0.929412 0.0392157 0 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 -0.05" rpy="-1.5708 0 0"/>
+      <geometry>
+        <mesh filename="package://kanga_description/meshes/core/wheel_a.stl"/>
+      </geometry>
+    </collision>
+  </link>
+  <!-- Joint from kanga_core to wheel_a -->
+  <joint name="wheel2" type="continuous">
+    <origin xyz="-0.430143 0.395775 -0.272479" rpy="1.5708 0 -0"/>
+    <parent link="kanga_core"/>
+    <child link="wheel_a"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="40" velocity="4.61"/>
+  </joint>
+  <!-- Link wheelb_2 -->
+  <link name="wheelb_2">
+    <inertial>
+      <origin xyz="8.20141e-07 4.19108e-07 0.0294338" rpy="0 0 0"/>
+      <mass value="0.7"/>
+      <inertia ixx="0.00536519" ixy="2.6367e-08" ixz="3.55462e-07" iyy="0.00536521" iyz="7.378e-09" izz="0.00759451"/>
+    </inertial>
+    <!-- Part wheelb_2 -->
+    <visual>
+      <origin xyz="0 0 -0.05" rpy="-1.5708 0 0"/>
+      <geometry>
+        <mesh filename="package://kanga_description/meshes/core/wheelb.stl"/>
+      </geometry>
+      <material name="wheelb_2_material">
+        <color rgba="0.929412 0.0392157 0 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 -0.05" rpy="-1.5708 0 0"/>
+      <geometry>
+        <mesh filename="package://kanga_description/meshes/core/wheelb.stl"/>
+      </geometry>
+    </collision>
+  </link>
+  <!-- Joint from kanga_core to wheelb_2 -->
+  <joint name="wheel3" type="continuous">
+    <origin xyz="-0.430143 -0.395725 -0.272479" rpy="1.5708 0 -3.14159"/>
+    <parent link="kanga_core"/>
+    <child link="wheelb_2"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="40" velocity="4.61"/>
+  </joint>
+  <!-- Link wheel_a_2 -->
+  <link name="wheel_a_2">
+    <inertial>
+      <origin xyz="1.69548e-06 -4.25166e-07 0.0294802" rpy="0 0 0"/>
+      <mass value="0.7"/>
+      <inertia ixx="0.0053658" ixy="2.7862e-08" ixz="3.79976e-07" iyy="0.00536582" iyz="-5.263e-09" izz="0.00759416"/>
+    </inertial>
+    <!-- Part wheel_a_2 -->
+    <visual>
+      <origin xyz="0 0 -0.05" rpy="-1.5708 -0 0"/>
+      <geometry>
+        <mesh filename="package://kanga_description/meshes/core/wheel_a.stl"/>
+      </geometry>
+      <material name="wheel_a_2_material">
+        <color rgba="0.929412 0.0392157 0 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 -0.05" rpy="-1.5708 -0 0"/>
+      <geometry>
+        <mesh filename="package://kanga_description/meshes/core/wheel_a.stl"/>
+      </geometry>
+    </collision>
+  </link>
+  <!-- Joint from kanga_core to wheel_a_2 -->
+  <joint name="wheel4" type="continuous">
+    <origin xyz="0.428413 -0.395725 -0.271989" rpy="1.5708 -0 -3.14159"/>
+    <parent link="kanga_core"/>
+    <child link="wheel_a_2"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="40" velocity="4.61"/>
+  </joint>
+  </xacro:macro>
+</robot>

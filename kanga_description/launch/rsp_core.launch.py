@@ -2,20 +2,14 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 from ament_index_python.packages import PackageNotFoundError, get_package_share_directory
 import os
-import shutil
 from launch.substitutions import Command, FindExecutable
 
 def generate_launch_description():
     pkg_share = get_package_share_directory("kanga_description")
     xacro_path = os.path.join(pkg_share, "urdf", "core", "kanga_core.urdf.xacro")
     rviz_config_path = os.path.join(pkg_share, "rviz", "rsp_core.rviz")
-    xacro_available = shutil.which("xacro") is not None
 
-    if xacro_available:
-        robot_description = Command([FindExecutable(name="xacro"), " ", xacro_path])
-    else:
-        with open(xacro_path, "r", encoding="utf-8") as f:
-            robot_description = f.read()
+    robot_description = Command([FindExecutable(name="xacro"), " ", xacro_path])
 
     nodes = [
         Node(
