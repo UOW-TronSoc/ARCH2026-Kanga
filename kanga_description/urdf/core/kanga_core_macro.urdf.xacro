@@ -65,8 +65,8 @@
     <axis xyz="0 0 0"/>
   </joint>
   <!-- Drive wheel links and joints. -->
-  <!-- Link wheelb -->
-  <link name="wheelb">
+  <!-- Link wheel_FL -->
+  <link name="wheel_FL">
     <inertial>
       <origin xyz="8.20141e-07 4.19108e-07 0.0294338" rpy="0 0 0"/>
       <mass value="0.7"/>
@@ -89,16 +89,16 @@
       </geometry>
     </collision>
   </link>
-  <!-- Joint from kanga_core to wheelb -->
+  <!-- Joint from kanga_core to wheel_FL -->
   <joint name="wheel1" type="continuous">
     <origin xyz="0.428413 0.395775 -0.271989" rpy="1.5708 0 0"/>
     <parent link="kanga_core"/>
-    <child link="wheelb"/>
+    <child link="wheel_FL"/>
     <axis xyz="0 0 1"/>
     <limit effort="40" velocity="4.61"/>
   </joint>
-  <!-- Link wheel_a -->
-  <link name="wheel_a">
+  <!-- Link wheel_BL -->
+  <link name="wheel_BL">
     <inertial>
       <origin xyz="1.69548e-06 -4.25166e-07 0.0294802" rpy="0 0 0"/>
       <mass value="0.7"/>
@@ -121,16 +121,16 @@
       </geometry>
     </collision>
   </link>
-  <!-- Joint from kanga_core to wheel_a -->
+  <!-- Joint from kanga_core to wheel_BL -->
   <joint name="wheel2" type="continuous">
     <origin xyz="-0.430143 0.395775 -0.272479" rpy="1.5708 0 -0"/>
     <parent link="kanga_core"/>
-    <child link="wheel_a"/>
+    <child link="wheel_BL"/>
     <axis xyz="0 0 1"/>
     <limit effort="40" velocity="4.61"/>
   </joint>
-  <!-- Link wheelb_2 -->
-  <link name="wheelb_2">
+  <!-- Link wheel_BR -->
+  <link name="wheel_BR">
     <inertial>
       <origin xyz="8.20141e-07 4.19108e-07 0.0294338" rpy="0 0 0"/>
       <mass value="0.7"/>
@@ -153,16 +153,16 @@
       </geometry>
     </collision>
   </link>
-  <!-- Joint from kanga_core to wheelb_2 -->
+  <!-- Joint from kanga_core to wheel_BR -->
   <joint name="wheel3" type="continuous">
     <origin xyz="-0.430143 -0.395725 -0.272479" rpy="1.5708 0 -3.14159"/>
     <parent link="kanga_core"/>
-    <child link="wheelb_2"/>
+    <child link="wheel_BR"/>
     <axis xyz="0 0 1"/>
     <limit effort="40" velocity="4.61"/>
   </joint>
-  <!-- Link wheel_a_2 -->
-  <link name="wheel_a_2">
+  <!-- Link wheel_FR -->
+  <link name="wheel_FR">
     <inertial>
       <origin xyz="1.69548e-06 -4.25166e-07 0.0294802" rpy="0 0 0"/>
       <mass value="0.7"/>
@@ -185,11 +185,11 @@
       </geometry>
     </collision>
   </link>
-  <!-- Joint from kanga_core to wheel_a_2 -->
+  <!-- Joint from kanga_core to wheel_FR -->
   <joint name="wheel4" type="continuous">
     <origin xyz="0.428413 -0.395725 -0.271989" rpy="1.5708 -0 -3.14159"/>
     <parent link="kanga_core"/>
-    <child link="wheel_a_2"/>
+    <child link="wheel_FR"/>
     <axis xyz="0 0 1"/>
     <limit effort="40" velocity="4.61"/>
   </joint>
