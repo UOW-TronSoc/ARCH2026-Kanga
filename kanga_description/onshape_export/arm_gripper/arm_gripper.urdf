@@ -1,0 +1,122 @@
+<?xml version="1.0" ?>
+<!-- Generated using onshape-to-robot -->
+<!-- Onshape https://tronsoc.onshape.com/documents/5c74485ef1d773fbe17b5191/w/13a360a01956ee72624f8844/e/acb4508c560633922a6db675 -->
+<robot name="arm_gripper">
+  <!-- Link l4 -->
+  <link name="l4">
+    <inertial>
+      <origin xyz="-0.0142313 0.0287561 0.0284316" rpy="0 0 0"/>
+      <mass value="0.8"/>
+      <inertia ixx="0.00330355" ixy="0.000978114" ixz="0.000116635" iyy="0.000846989" iyz="-0.000183013" izz="0.00370143"/>
+    </inertial>
+    <!-- Part l4 -->
+    <visual>
+      <origin xyz="-0.0334738 -0.125328 0.0674204" rpy="4.81e-08 -1.5708 0"/>
+      <geometry>
+        <mesh filename="package://kanga_description/assets_kanga_arm_gripper/l4.stl"/>
+      </geometry>
+      <material name="l4_material">
+        <color rgba="0.0862745 0.317647 0.690196 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0334738 -0.125328 0.0674204" rpy="4.81e-08 -1.5708 0"/>
+      <geometry>
+        <mesh filename="package://kanga_description/assets_kanga_arm_gripper/l4.stl"/>
+      </geometry>
+    </collision>
+  </link>
+  <!-- Frame rsd435i_mount (dummy link + fixed joint) -->
+  <link name="rsd435i_mount">
+    <origin xyz="0 0 0" rpy="0 -0 0"/>
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="1e-9"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+  </link>
+  <joint name="rsd435i_mount_frame" type="fixed">
+    <origin xyz="-0.0634502 0.0939187 0.056" rpy="1.5708 -0 -1.48353"/>
+    <parent link="l4"/>
+    <child link="rsd435i_mount"/>
+    <axis xyz="0 0 0"/>
+  </joint>
+  <!-- Link l5 -->
+  <link name="l5">
+    <inertial>
+      <origin xyz="1.12104e-06 -0.00636427 -0.0838165" rpy="0 0 0"/>
+      <mass value="0.5"/>
+      <inertia ixx="0.0010927" ixy="6.88678e-07" ixz="6.65337e-07" iyy="0.0013298" iyz="-4.93335e-05" izz="0.000475952"/>
+    </inertial>
+    <!-- Part l5 -->
+    <visual>
+      <origin xyz="0.0384804 -0.0334738 -0.0953276" rpy="1.5708 0 0"/>
+      <geometry>
+        <mesh filename="package://kanga_description/assets_kanga_arm_gripper/l5.stl"/>
+      </geometry>
+      <material name="l5_material">
+        <color rgba="0.368627 0.25098 0.643137 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0384804 -0.0334738 -0.0953276" rpy="1.5708 0 0"/>
+      <geometry>
+        <mesh filename="package://kanga_description/assets_kanga_arm_gripper/l5.stl"/>
+      </geometry>
+    </collision>
+    <!-- Part fre_gripper__fixed -->
+    <visual>
+      <origin xyz="0.0030445 -0.0021803 -0.22035" rpy="-1.5708 0 2.608e-09"/>
+      <geometry>
+        <mesh filename="package://kanga_description/assets_kanga_arm_gripper/fre_gripper__fixed.stl"/>
+      </geometry>
+      <material name="fre_gripper__fixed_material">
+        <color rgba="0.596078 0.121569 0.67451 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0030445 -0.0021803 -0.22035" rpy="-1.5708 0 2.608e-09"/>
+      <geometry>
+        <mesh filename="package://kanga_description/assets_kanga_arm_gripper/fre_gripper__fixed.stl"/>
+      </geometry>
+    </collision>
+  </link>
+  <!-- Frame arm_dh_j5 (dummy link + fixed joint) -->
+  <link name="arm_dh_j5">
+    <origin xyz="0 0 0" rpy="0 -0 0"/>
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="1e-9"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+  </link>
+  <joint name="arm_dh_j5_frame" type="fixed">
+    <origin xyz="-0 -0 0.03" rpy="-3.14159 0 0"/>
+    <parent link="l5"/>
+    <child link="arm_dh_j5"/>
+    <axis xyz="0 0 0"/>
+  </joint>
+  <!-- Frame gripper_endpoint (dummy link + fixed joint) -->
+  <link name="gripper_endpoint">
+    <origin xyz="0 0 0" rpy="0 -0 0"/>
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="1e-9"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+  </link>
+  <joint name="gripper_endpoint_frame" type="fixed">
+    <origin xyz="0 -0.0001 -0.211725" rpy="-3.14159 0 2.608e-09"/>
+    <parent link="l5"/>
+    <child link="gripper_endpoint"/>
+    <axis xyz="0 0 0"/>
+  </joint>
+  <!-- Joint from l4 to l5 -->
+  <joint name="arm_j5" type="revolute">
+    <origin xyz="1.443e-09 -0.03 0.02894" rpy="-1.5708 1.5708 0"/>
+    <parent link="l4"/>
+    <child link="l5"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="10" velocity="10" lower="-3.14159" upper="3.14159"/>
+  </joint>
+</robot>
