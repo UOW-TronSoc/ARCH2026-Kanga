@@ -2,12 +2,12 @@
     "configuration": "default",
     "documentId": "05c6ea0db3db2c3eaa2cd796",
     "documentMicroversion": "40d07b92aa3c426689b03808",
-    "elementId": "9209024b2088040bac674d48",
+    "elementId": "a6648bfeb48ac5188849eaa6",
     "fullConfiguration": "default",
-    "id": "MgO7FgfJa3IBv1kms",
+    "id": "McZk1aocMNplYNHH/",
     "isStandardContent": false,
-    "name": "WheelB <1>",
-    "partId": "JGD",
+    "name": "diff_bar <1>",
+    "partId": "JID",
     "suppressed": false,
     "type": "Part"
 }
