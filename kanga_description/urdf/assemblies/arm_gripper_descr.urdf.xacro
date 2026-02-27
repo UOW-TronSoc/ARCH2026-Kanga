@@ -1,5 +1,5 @@
 <?xml version="1.0" ?>
-<robot name="arm_gripper" xmlns:xacro="http://www.ros.org/wiki/xacro">
+<robot name="arm_gripper_assembly" xmlns:xacro="http://www.ros.org/wiki/xacro">
   <!-- Top-level assembly:
        combine arm payload + arm gripper payload (with D435i). -->
   <xacro:include filename="$(find kanga_description)/urdf/payloads/arm/arm_payload_macro.urdf.xacro"/>
