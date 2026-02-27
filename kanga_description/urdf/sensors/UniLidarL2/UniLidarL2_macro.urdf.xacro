@@ -1,0 +1,74 @@
+<?xml version="1.0" ?>
+<robot name="unilidarl2_macro" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!-- Reusable lidar component.
+       Params:
+       - parent: link this sensor mounts to
+       - xyz/rpy: pose of the lidar relative to parent
+       - prefix: optional name prefix to avoid link/joint collisions -->
+  <xacro:macro name="unilidarl2" params="parent xyz:='0 0 0' rpy:='0 0 0' prefix:=''">
+    <!-- Mount joint from caller-provided parent to lidar base. -->
+    <joint name="${prefix}unilidarl2_mount_joint" type="fixed">
+      <origin xyz="${xyz}" rpy="${rpy}"/>
+      <parent link="${parent}"/>
+      <child link="${prefix}unilidarl2_base"/>
+      <axis xyz="0 0 0"/>
+    </joint>
+
+    <!-- Main lidar body. -->
+    <link name="${prefix}unilidarl2_base">
+      <inertial>
+        <origin xyz="6.88756e-05 4.86924e-06 0.00436145" rpy="0 0 0"/>
+        <mass value="0.1"/>
+        <inertia ixx="4.63963e-05" ixy="1.473e-09" ixz="9.141e-08" iyy="4.60192e-05" iyz="3.537e-09" izz="8.42575e-05"/>
+      </inertial>
+      <visual>
+        <origin xyz="-1.94934e-06 -0.53025 0.313234" rpy="3.14159 -0.349066 1.5708"/>
+        <geometry>
+          <mesh filename="package://kanga_description/urdf/sensors/UniLidarL2/meshes/unilidarl2_base.stl"/>
+        </geometry>
+        <material name="unilidarl2_base_material">
+          <color rgba="0.301961 0.301961 0.301961 1"/>
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="-1.94934e-06 -0.53025 0.313234" rpy="3.14159 -0.349066 1.5708"/>
+        <geometry>
+          <mesh filename="package://kanga_description/urdf/sensors/UniLidarL2/meshes/unilidarl2_base.stl"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <!-- Rotating top cap of the lidar. -->
+    <link name="${prefix}unilidarl2_top">
+      <inertial>
+        <origin xyz="6.66489e-05 -2.74177e-06 0.0157604" rpy="0 0 0"/>
+        <mass value="0.13"/>
+        <inertia ixx="3.66094e-05" ixy="-1.075e-09" ixz="-9.3857e-08" iyy="5.78833e-05" iyz="-2.975e-09" izz="7.00661e-05"/>
+      </inertial>
+      <visual>
+        <origin xyz="-1.94934e-06 -0.53025 0.290634" rpy="3.14159 -0.349066 1.5708"/>
+        <geometry>
+          <mesh filename="package://kanga_description/urdf/sensors/UniLidarL2/meshes/unilidarl2_top.stl"/>
+        </geometry>
+        <material name="unilidarl2_top_material">
+          <color rgba="0.215686 0.215686 0.215686 1"/>
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="-1.94934e-06 -0.53025 0.290634" rpy="3.14159 -0.349066 1.5708"/>
+        <geometry>
+          <mesh filename="package://kanga_description/urdf/sensors/UniLidarL2/meshes/unilidarl2_top.stl"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <!-- Spin joint from base to top cap (currently constrained by limits). -->
+    <joint name="${prefix}unilidarl2_top_joint" type="revolute">
+      <origin xyz="-0 0 0.0214" rpy="0 -0 0"/>
+      <parent link="${prefix}unilidarl2_base"/>
+      <child link="${prefix}unilidarl2_top"/>
+      <axis xyz="0 0 1"/>
+      <limit effort="10" velocity="10" lower="0" upper="0"/>
+    </joint>
+  </xacro:macro>
+</robot>

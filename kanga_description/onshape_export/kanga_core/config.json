@@ -1,0 +1,18 @@
+{
+  "url": "https://tronsoc.onshape.com/documents/05c6ea0db3db2c3eaa2cd796/w/7af9416258b5cd82f658c621/e/713b4d5f072e950d70de1171",
+  "output_format": "urdf",
+  "output_filename": "kanga_core",
+  "assets_directory": "assets_kanga_core",
+  "assembly_name": "kanga_core",
+  "package_name": "kanga_description",
+  "joint_properties": {
+    "default": {
+      "max_effort": 0.0,
+      "max_velocity": 0.0
+    },
+    "wheel1": { "type": "continuous" },
+    "wheel2": { "type": "continuous" },
+    "wheel3": { "type": "continuous" },
+    "wheel4": { "type": "continuous" }
+  }
+}

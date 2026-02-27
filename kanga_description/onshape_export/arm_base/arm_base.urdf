@@ -1,0 +1,232 @@
+<?xml version="1.0" ?>
+<!-- Generated using onshape-to-robot -->
+<!-- Onshape https://tronsoc.onshape.com/documents/5c74485ef1d773fbe17b5191/w/13a360a01956ee72624f8844/e/1ab994822edef3cfa46d5b74 -->
+<robot name="arm_base">
+  <!-- Link baserotation -->
+  <link name="baserotation">
+    <inertial>
+      <origin xyz="-0.0606852 0.208293 -0.0276408" rpy="0 0 0"/>
+      <mass value="2"/>
+      <inertia ixx="0.0135135" ixy="6.73183e-05" ixz="6.89543e-05" iyy="0.00589845" iyz="0.00163027" izz="0.0109675"/>
+    </inertial>
+    <!-- Part baserotation -->
+    <visual>
+      <origin xyz="-0.059466 0.154694 -0" rpy="0 -0 1.5708"/>
+      <geometry>
+        <mesh filename="package://kanga_description/assets_kanga_arm_base/baserotation.stl"/>
+      </geometry>
+      <material name="baserotation_material">
+        <color rgba="0.866667 0.321569 0.156863 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.059466 0.154694 -0" rpy="0 -0 1.5708"/>
+      <geometry>
+        <mesh filename="package://kanga_description/assets_kanga_arm_base/baserotation.stl"/>
+      </geometry>
+    </collision>
+  </link>
+  <!-- Frame arm_dh_j1 (dummy link + fixed joint) -->
+  <link name="arm_dh_j1">
+    <origin xyz="0 0 0" rpy="0 -0 0"/>
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="1e-9"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+  </link>
+  <joint name="arm_dh_j1_frame" type="fixed">
+    <origin xyz="-0.06 0.235 0.006" rpy="0 -0 0"/>
+    <parent link="baserotation"/>
+    <child link="arm_dh_j1"/>
+    <axis xyz="0 0 0"/>
+  </joint>
+  <!-- Link link1 -->
+  <link name="link1">
+    <inertial>
+      <origin xyz="0.0153434 0.000216753 -0.0502363" rpy="0 0 0"/>
+      <mass value="2.5"/>
+      <inertia ixx="0.00487168" ixy="-3.8755e-05" ixz="0.0007241" iyy="0.00640313" iyz="-1.88755e-05" izz="0.00488291"/>
+    </inertial>
+    <!-- Part link1 -->
+    <visual>
+      <origin xyz="-0.0803056 0.000534043 0.011" rpy="3.14159 0 -0"/>
+      <geometry>
+        <mesh filename="package://kanga_description/assets_kanga_arm_base/link1.stl"/>
+      </geometry>
+      <material name="link1_material">
+        <color rgba="0.909804 0.572549 0.164706 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0803056 0.000534043 0.011" rpy="3.14159 0 -0"/>
+      <geometry>
+        <mesh filename="package://kanga_description/assets_kanga_arm_base/link1.stl"/>
+      </geometry>
+    </collision>
+  </link>
+  <!-- Frame arm_dh_j2 (dummy link + fixed joint) -->
+  <link name="arm_dh_j2">
+    <origin xyz="0 0 0" rpy="0 -0 0"/>
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="1e-9"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+  </link>
+  <joint name="arm_dh_j2_frame" type="fixed">
+    <origin xyz="-0 -0 -0.079" rpy="1.5708 -1.05e-10 1.5708"/>
+    <parent link="link1"/>
+    <child link="arm_dh_j2"/>
+    <axis xyz="0 0 0"/>
+  </joint>
+  <!-- Link link2 -->
+  <link name="link2">
+    <inertial>
+      <origin xyz="0.334577 -0.00106845 0.0227252" rpy="0 0 0"/>
+      <mass value="1"/>
+      <inertia ixx="0.00146164" ixy="3.85103e-05" ixz="-0.000441543" iyy="0.0319052" iyz="-4.59646e-05" izz="0.0315154"/>
+    </inertial>
+    <!-- Part link2 -->
+    <visual>
+      <origin xyz="-0.0281718 -0.0854675 -0.165806" rpy="-1.5708 -1.57079 -0.31279"/>
+      <geometry>
+        <mesh filename="package://kanga_description/assets_kanga_arm_base/link2.stl"/>
+      </geometry>
+      <material name="link2_material">
+        <color rgba="1 0.756863 0.054902 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.0281718 -0.0854675 -0.165806" rpy="-1.5708 -1.57079 -0.31279"/>
+      <geometry>
+        <mesh filename="package://kanga_description/assets_kanga_arm_base/link2.stl"/>
+      </geometry>
+    </collision>
+  </link>
+  <!-- Frame arm_dh_j3 (dummy link + fixed joint) -->
+  <link name="arm_dh_j3">
+    <origin xyz="0 0 0" rpy="0 -0 0"/>
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="1e-9"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+  </link>
+  <joint name="arm_dh_j3_frame" type="fixed">
+    <origin xyz="0.449997 1.12725e-06 0.0255" rpy="-0 0 -3.14159"/>
+    <parent link="link2"/>
+    <child link="arm_dh_j3"/>
+    <axis xyz="0 0 0"/>
+  </joint>
+  <!-- Link link3 -->
+  <link name="link3">
+    <inertial>
+      <origin xyz="0.0108991 -0.249104 0.0193538" rpy="0 0 0"/>
+      <mass value="1"/>
+      <inertia ixx="0.0256984" ixy="0.00124988" ixz="-1.85772e-05" iyy="0.00107522" iyz="0.000150845" izz="0.0261028"/>
+    </inertial>
+    <!-- Part link3 -->
+    <visual>
+      <origin xyz="-0.318581 -0.366655 0.126306" rpy="1.5708 1.57079 1.34506"/>
+      <geometry>
+        <mesh filename="package://kanga_description/assets_kanga_arm_base/link3.stl"/>
+      </geometry>
+      <material name="link3_material">
+        <color rgba="0.372549 0.654902 0.239216 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="-0.318581 -0.366655 0.126306" rpy="1.5708 1.57079 1.34506"/>
+      <geometry>
+        <mesh filename="package://kanga_description/assets_kanga_arm_base/link3.stl"/>
+      </geometry>
+    </collision>
+  </link>
+  <!-- Link link4 -->
+  <link name="link4">
+    <inertial>
+      <origin xyz="5.02554e-05 0.000705645 0.0166778" rpy="0 0 0"/>
+      <mass value="0.3"/>
+      <inertia ixx="0.000168691" ixy="-3.29003e-07" ixz="5.79948e-07" iyy="0.000164786" iyz="8.07385e-06" izz="5.72926e-05"/>
+    </inertial>
+    <!-- Part link4 -->
+    <visual>
+      <origin xyz="0.0813846 0.308891 -0.0863056" rpy="-1.5708 -1.57079 3.03657"/>
+      <geometry>
+        <mesh filename="package://kanga_description/assets_kanga_arm_base/link4.stl"/>
+      </geometry>
+      <material name="link4_material">
+        <color rgba="0.0862745 0.317647 0.690196 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0813846 0.308891 -0.0863056" rpy="-1.5708 -1.57079 3.03657"/>
+      <geometry>
+        <mesh filename="package://kanga_description/assets_kanga_arm_base/link4.stl"/>
+      </geometry>
+    </collision>
+  </link>
+  <!-- Frame arm_dh_j4 (dummy link + fixed joint) -->
+  <link name="arm_dh_j4">
+    <origin xyz="0 0 0" rpy="0 -0 0"/>
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="1e-9"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+  </link>
+  <joint name="arm_dh_j4_frame" type="fixed">
+    <origin xyz="-0 0 0.0145" rpy="0 0 1.55304"/>
+    <parent link="link4"/>
+    <child link="arm_dh_j4"/>
+    <axis xyz="0 0 0"/>
+  </joint>
+  <!-- Frame end_effector_mount (dummy link + fixed joint) -->
+  <link name="end_effector_mount">
+    <origin xyz="0 0 0" rpy="0 -0 0"/>
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="1e-9"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+  </link>
+  <joint name="end_effector_mount_frame" type="fixed">
+    <origin xyz="-0 0 0.054" rpy="0 0 1.5708"/>
+    <parent link="link4"/>
+    <child link="end_effector_mount"/>
+    <axis xyz="0 0 0"/>
+  </joint>
+  <!-- Joint from link3 to link4 -->
+  <joint name="arm_j4" type="revolute">
+    <origin xyz="-2.68886e-06 -0.389999 0.04" rpy="-3.14159 0 -3.14159"/>
+    <parent link="link3"/>
+    <child link="link4"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="10" velocity="10" lower="-3.66519" upper="0"/>
+  </joint>
+  <!-- Joint from link2 to link3 -->
+  <joint name="arm_j3" type="revolute">
+    <origin xyz="0.449997 1.12725e-06 -0.0395" rpy="3.14159 -0 0"/>
+    <parent link="link2"/>
+    <child link="link3"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="10" velocity="10" lower="-1.309" upper="2.26893"/>
+  </joint>
+  <!-- Joint from link1 to link2 -->
+  <joint name="arm_j2" type="revolute">
+    <origin xyz="0.0855 5.2029e-07 -0.079" rpy="-6.08527e-06 1.5708 0"/>
+    <parent link="link1"/>
+    <child link="link2"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="10" velocity="10" lower="-1.5708" upper="2.44346"/>
+  </joint>
+  <!-- Joint from baserotation to link1 -->
+  <joint name="arm_j1" type="revolute">
+    <origin xyz="-0.06 0.235 0.011" rpy="3.14159 0 1.5708"/>
+    <parent link="baserotation"/>
+    <child link="link1"/>
+    <axis xyz="0 0 1"/>
+    <limit effort="10" velocity="10" lower="-1.5708" upper="1.5708"/>
+  </joint>
+</robot>

@@ -1,0 +1,9 @@
+<?xml version="1.0" ?>
+<robot name="arm_gripper_payload" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!-- Wrapper file:
+       include the reusable arm gripper macro and instantiate it standalone. -->
+  <xacro:include filename="$(find kanga_description)/urdf/payloads/arm/arm_gripper_payload_macro.urdf.xacro"/>
+
+  <link name="base_link"/>
+  <xacro:arm_gripper_payload parent="base_link"/>
+</robot>
