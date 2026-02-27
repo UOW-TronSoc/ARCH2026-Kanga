@@ -1,0 +1,295 @@
+<?xml version="1.0" ?>
+<robot name="kanga_core_macro" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!-- Reusable rover core model with suspension.
+       Params:
+       - prefix: optional name prefix to avoid link/joint collisions -->
+  <xacro:macro name="kanga_core" params="prefix:=''">
+    <!-- Base/root frame for full rover assemblies. -->
+    <link name="${prefix}base_link"/>
+
+    <joint name="${prefix}base_link_to_kanga_core" type="fixed">
+      <parent link="${prefix}base_link"/>
+      <child link="${prefix}kanga_core"/>
+      <origin xyz="0.0 0.0 0.39697" rpy="0 0 0"/>
+    </joint>
+
+    <!-- Main chassis body (core + antenna geometry). -->
+    <link name="${prefix}kanga_core">
+      <inertial>
+        <origin xyz="-0.0805841 -0.0158605 0.124198" rpy="0 0 0"/>
+        <mass value="8.4"/>
+        <inertia ixx="0.334932" ixy="-0.0282303" ixz="0.0776441" iyy="0.445283" iyz="0.0534754" izz="0.396654"/>
+      </inertial>
+      <visual>
+        <origin xyz="-0.0406693 -0 0" rpy="0 0 1.5708"/>
+        <geometry>
+          <mesh filename="package://kanga_description/meshes/core/kanga_core/core.stl"/>
+        </geometry>
+        <material name="core_material">
+          <color rgba="0.701961 0.701961 0.701961 1"/>
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="-0.0406693 -0 0" rpy="0 0 1.5708"/>
+        <geometry>
+          <mesh filename="package://kanga_description/meshes/core/kanga_core/core.stl"/>
+        </geometry>
+      </collision>
+      <visual>
+        <origin xyz="-0.0406693 -0 0" rpy="0 -0 1.5708"/>
+        <geometry>
+          <mesh filename="package://kanga_description/meshes/core/kanga_core/antenna.stl"/>
+        </geometry>
+        <material name="antenna_material">
+          <color rgba="0.901961 0.901961 0.901961 1"/>
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="-0.0406693 -0 0" rpy="0 -0 1.5708"/>
+        <geometry>
+          <mesh filename="package://kanga_description/meshes/core/kanga_core/antenna.stl"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="${prefix}top_payload_mount">
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="1e-9"/>
+        <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+      </inertial>
+    </link>
+    <joint name="${prefix}top_payload_mount_frame" type="fixed">
+      <origin xyz="0.379844 -0.1575 0.1216" rpy="-0 0 0"/>
+      <parent link="${prefix}kanga_core"/>
+      <child link="${prefix}top_payload_mount"/>
+      <axis xyz="0 0 0"/>
+    </joint>
+
+    <link name="${prefix}front_payload_mount">
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="1e-9"/>
+        <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+      </inertial>
+    </link>
+    <joint name="${prefix}front_payload_mount_frame" type="fixed">
+      <origin xyz="0.158499 -0 0.0116" rpy="0 0 0"/>
+      <parent link="${prefix}kanga_core"/>
+      <child link="${prefix}front_payload_mount"/>
+      <axis xyz="0 0 0"/>
+    </joint>
+
+    <link name="${prefix}left_suspension">
+      <inertial>
+        <origin xyz="-0.132214 -0.267383 -0.0630324" rpy="0 0 0"/>
+        <mass value="9"/>
+        <inertia ixx="0.143475" ixy="-0.0477444" ixz="-0.00738433" iyy="1.29898" iyz="-0.0240894" izz="1.38116"/>
+      </inertial>
+      <visual>
+        <origin xyz="-0.189168 -0.0616 0.1911" rpy="-1.5708 1.5708 0"/>
+        <geometry>
+          <mesh filename="package://kanga_description/meshes/core/kanga_core/left_suspension.stl"/>
+        </geometry>
+        <material name="left_suspension_material">
+          <color rgba="0.701961 0.701961 0.701961 1"/>
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="-0.189168 -0.0616 0.1911" rpy="-1.5708 1.5708 0"/>
+        <geometry>
+          <mesh filename="package://kanga_description/meshes/core/kanga_core/left_suspension.stl"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="${prefix}wheel_fl">
+      <inertial>
+        <origin xyz="8.20141e-07 4.19108e-07 0.0294338" rpy="0 0 0"/>
+        <mass value="0.7"/>
+        <inertia ixx="0.00536519" ixy="2.6367e-08" ixz="3.55462e-07" iyy="0.00536521" iyz="7.378e-09" izz="0.00759451"/>
+      </inertial>
+      <visual>
+        <origin xyz="0 -0 -0.05" rpy="-1.5708 0 0"/>
+        <geometry>
+          <mesh filename="package://kanga_description/meshes/core/kanga_core/wheelb.stl"/>
+        </geometry>
+        <material name="wheelb_material">
+          <color rgba="0.929412 0.0392157 0 1"/>
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 -0 -0.05" rpy="-1.5708 0 0"/>
+        <geometry>
+          <mesh filename="package://kanga_description/meshes/core/kanga_core/wheelb.stl"/>
+        </geometry>
+      </collision>
+    </link>
+    <joint name="${prefix}wheel_fl_joint" type="continuous">
+      <origin xyz="0.279914 -0.333589 -0.204675" rpy="0 0 0"/>
+      <parent link="${prefix}left_suspension"/>
+      <child link="${prefix}wheel_fl"/>
+      <axis xyz="0 0 1"/>
+      <limit effort="0" velocity="0"/>
+    </joint>
+
+    <link name="${prefix}wheel_bl">
+      <inertial>
+        <origin xyz="1.69548e-06 -4.25166e-07 0.0294802" rpy="0 0 0"/>
+        <mass value="0.7"/>
+        <inertia ixx="0.0053658" ixy="2.7862e-08" ixz="3.79976e-07" iyy="0.00536582" iyz="-5.263e-09" izz="0.00759416"/>
+      </inertial>
+      <visual>
+        <origin xyz="0 0 -0.05" rpy="-1.5708 -0 0"/>
+        <geometry>
+          <mesh filename="package://kanga_description/meshes/core/kanga_core/wheel_a.stl"/>
+        </geometry>
+        <material name="wheel_a_material">
+          <color rgba="0.929412 0.0392157 0 1"/>
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 -0.05" rpy="-1.5708 -0 0"/>
+        <geometry>
+          <mesh filename="package://kanga_description/meshes/core/kanga_core/wheel_a.stl"/>
+        </geometry>
+      </collision>
+    </link>
+    <joint name="${prefix}wheel_bl_joint" type="continuous">
+      <origin xyz="-0.578642 -0.334079 -0.204675" rpy="0 0 0"/>
+      <parent link="${prefix}left_suspension"/>
+      <child link="${prefix}wheel_bl"/>
+      <axis xyz="0 0 1"/>
+      <limit effort="0" velocity="0" lower="0" upper="0"/>
+    </joint>
+
+    <joint name="${prefix}left_suspension_joint" type="revolute">
+      <origin xyz="0.148499 0.1911 0.0616" rpy="1.5708 0 0"/>
+      <parent link="${prefix}kanga_core"/>
+      <child link="${prefix}left_suspension"/>
+      <axis xyz="0 0 1"/>
+      <limit effort="0" velocity="0" lower="0" upper="0"/>
+    </joint>
+
+    <link name="${prefix}right_suspension">
+      <inertial>
+        <origin xyz="0.134107 -0.26778 -0.0627896" rpy="0 0 0"/>
+        <mass value="9"/>
+        <inertia ixx="0.143252" ixy="0.0492184" ixz="0.00651663" iyy="1.30123" iyz="-0.0237955" izz="1.38328"/>
+      </inertial>
+      <visual>
+        <origin xyz="0.189168 -0.0616 0.1911" rpy="-1.5708 -1.5708 0"/>
+        <geometry>
+          <mesh filename="package://kanga_description/meshes/core/kanga_core/right_suspension.stl"/>
+        </geometry>
+        <material name="right_suspension_material">
+          <color rgba="0.701961 0.701961 0.701961 1"/>
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0.189168 -0.0616 0.1911" rpy="-1.5708 -1.5708 0"/>
+        <geometry>
+          <mesh filename="package://kanga_description/meshes/core/kanga_core/right_suspension.stl"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <link name="${prefix}wheel_fr">
+      <inertial>
+        <origin xyz="1.69548e-06 -4.25166e-07 0.0294802" rpy="0 0 0"/>
+        <mass value="0.7"/>
+        <inertia ixx="0.0053658" ixy="2.7862e-08" ixz="3.79976e-07" iyy="0.00536582" iyz="-5.263e-09" izz="0.00759416"/>
+      </inertial>
+      <visual>
+        <origin xyz="0 0 -0.05" rpy="-1.5708 -0 0"/>
+        <geometry>
+          <mesh filename="package://kanga_description/meshes/core/kanga_core/wheel_a.stl"/>
+        </geometry>
+        <material name="wheel_a_2_material">
+          <color rgba="0.929412 0.0392157 0 1"/>
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 -0.05" rpy="-1.5708 -0 0"/>
+        <geometry>
+          <mesh filename="package://kanga_description/meshes/core/kanga_core/wheel_a.stl"/>
+        </geometry>
+      </collision>
+    </link>
+    <joint name="${prefix}wheel_fr_joint" type="continuous">
+      <origin xyz="-0.279914 -0.333589 -0.204625" rpy="0 0 0"/>
+      <parent link="${prefix}right_suspension"/>
+      <child link="${prefix}wheel_fr"/>
+      <axis xyz="0 0 1"/>
+      <limit effort="0" velocity="0"/>
+    </joint>
+
+    <link name="${prefix}wheel_br">
+      <inertial>
+        <origin xyz="8.20141e-07 4.19108e-07 0.0294338" rpy="0 0 0"/>
+        <mass value="0.7"/>
+        <inertia ixx="0.00536519" ixy="2.6367e-08" ixz="3.55462e-07" iyy="0.00536521" iyz="7.378e-09" izz="0.00759451"/>
+      </inertial>
+      <visual>
+        <origin xyz="0 0 -0.05" rpy="-1.5708 0 0"/>
+        <geometry>
+          <mesh filename="package://kanga_description/meshes/core/kanga_core/wheelb.stl"/>
+        </geometry>
+        <material name="wheelb_2_material">
+          <color rgba="0.929412 0.0392157 0 1"/>
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 -0.05" rpy="-1.5708 0 0"/>
+        <geometry>
+          <mesh filename="package://kanga_description/meshes/core/kanga_core/wheelb.stl"/>
+        </geometry>
+      </collision>
+    </link>
+    <joint name="${prefix}wheel_br_joint" type="continuous">
+      <origin xyz="0.578642 -0.334079 -0.204625" rpy="0 0 0"/>
+      <parent link="${prefix}right_suspension"/>
+      <child link="${prefix}wheel_br"/>
+      <axis xyz="0 0 1"/>
+      <limit effort="0" velocity="0"/>
+    </joint>
+
+    <joint name="${prefix}right_suspension_joint" type="revolute">
+      <origin xyz="0.148499 -0.1911 0.0616" rpy="1.5708 -0 -3.14159"/>
+      <parent link="${prefix}kanga_core"/>
+      <child link="${prefix}right_suspension"/>
+      <axis xyz="0 0 1"/>
+      <limit effort="0" velocity="0" lower="0" upper="0"/>
+    </joint>
+
+    <link name="${prefix}diff_bar">
+      <inertial>
+        <origin xyz="-0 0.00376465 -0.00953053" rpy="0 0 0"/>
+        <mass value="0.4"/>
+        <inertia ixx="8.38592e-05" ixy="-0" ixz="-0" iyy="0.00473068" iyz="1.00357e-05" izz="0.00472925"/>
+      </inertial>
+      <visual>
+        <origin xyz="-0 -0.0766 0.260486" rpy="-1.5708 -0 0"/>
+        <geometry>
+          <mesh filename="package://kanga_description/meshes/core/kanga_core/diff_bar.stl"/>
+        </geometry>
+        <material name="diff_bar_material">
+          <color rgba="0.701961 0.701961 0.701961 1"/>
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="-0 -0.0766 0.260486" rpy="-1.5708 -0 0"/>
+        <geometry>
+          <mesh filename="package://kanga_description/meshes/core/kanga_core/diff_bar.stl"/>
+        </geometry>
+      </collision>
+    </link>
+    <joint name="${prefix}diff_bar_joint" type="revolute">
+      <origin xyz="-0.301156 0 0.0766" rpy="1.5708 0 1.5708"/>
+      <parent link="${prefix}kanga_core"/>
+      <child link="${prefix}diff_bar"/>
+      <axis xyz="0 0 1"/>
+      <limit effort="0" velocity="0" lower="0" upper="0"/>
+    </joint>
+  </xacro:macro>
+</robot>

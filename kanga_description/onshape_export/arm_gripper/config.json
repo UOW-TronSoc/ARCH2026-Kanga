@@ -1,0 +1,8 @@
+{
+  "url": "https://tronsoc.onshape.com/documents/5c74485ef1d773fbe17b5191/w/13a360a01956ee72624f8844/e/acb4508c560633922a6db675",
+  "output_format": "urdf",
+  "output_filename": "arm_gripper",
+  "assets_directory": "assets_kanga_arm_gripper",
+  "assembly_name": "arm_gripper",
+  "package_name": "kanga_description"
+}

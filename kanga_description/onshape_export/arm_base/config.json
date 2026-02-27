@@ -1,0 +1,8 @@
+{
+  "url": "https://tronsoc.onshape.com/documents/5c74485ef1d773fbe17b5191/w/13a360a01956ee72624f8844/e/1ab994822edef3cfa46d5b74",
+  "output_format": "urdf",
+  "output_filename": "arm_base",
+  "assets_directory": "assets_kanga_arm_base",
+  "assembly_name": "arm_baseq",
+  "package_name": "kanga_description"
+}

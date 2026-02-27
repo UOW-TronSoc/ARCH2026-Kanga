@@ -1,0 +1,9 @@
+<?xml version="1.0" ?>
+<robot name="autonomous_zed_payload" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!-- Wrapper file:
+       include the reusable autonomous ZED payload macro and instantiate it standalone. -->
+  <xacro:include filename="$(find kanga_description)/urdf/payloads/autonomous/autonomous_zed_payload_macro.urdf.xacro"/>
+
+  <link name="base_link"/>
+  <xacro:autonomous_zed_payload parent="base_link"/>
+</robot>

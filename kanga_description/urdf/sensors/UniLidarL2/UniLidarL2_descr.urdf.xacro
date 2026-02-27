@@ -1,0 +1,11 @@
+<?xml version="1.0" ?>
+<robot name="unilidarl2" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!-- Wrapper file:
+       Include the reusable lidar macro and instantiate it as a standalone model. -->
+  <xacro:include filename="$(find kanga_description)/urdf/sensors/UniLidarL2/UniLidarL2_macro.urdf.xacro"/>
+
+  <!-- Local root used only when visualizing the lidar by itself. -->
+  <link name="base_link"/>
+  <!-- Instantiate the reusable macro and attach it to this root. -->
+  <xacro:unilidarl2 parent="base_link"/>
+</robot>

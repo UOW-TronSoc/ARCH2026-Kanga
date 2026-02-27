@@ -1,0 +1,15 @@
+<?xml version="1.0" ?>
+<robot name="kanga_arm_gripper" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!-- Top-level assembly:
+       combine kanga core + arm payload + arm gripper payload. -->
+  <xacro:include filename="$(find kanga_description)/urdf/core/kanga_core_macro.urdf.xacro"/>
+  <xacro:include filename="$(find kanga_description)/urdf/payloads/arm/arm_payload_macro.urdf.xacro"/>
+  <xacro:include filename="$(find kanga_description)/urdf/payloads/arm/arm_gripper_payload_macro.urdf.xacro"/>
+
+  <!-- Build core first. -->
+  <xacro:kanga_core/>
+  <!-- Mount arm payload to the rover top payload mount. -->
+  <xacro:arm_payload parent="top_payload_mount"/>
+  <!-- Mount gripper payload (with D435i) to arm end-effector. -->
+  <xacro:arm_gripper_payload parent="end_effector_mount"/>
+</robot>
