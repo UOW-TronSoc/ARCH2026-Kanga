@@ -8,6 +8,8 @@
 
 #include <chrono>
 #include <thread>
+#include <string>
+#include <cmath>
 #include <Eigen/Dense>
 
 class RaisimBridge : public rclcpp::Node
@@ -58,21 +60,93 @@ public:
 		robot = world.addArticulatedSystem(urdf_file);
 		robot->setName("Kanga Arm");
 
+
+		world.setGravity({0, 0, 0});
+
 		// Remove collision between successive links only (adjacent joints)
 		robot->ignoreCollisionBetween(0, 1);
 		robot->ignoreCollisionBetween(1, 2);
 		robot->ignoreCollisionBetween(2, 3);
 		robot->ignoreCollisionBetween(3, 4);
 		robot->ignoreCollisionBetween(4, 5);
+		robot->ignoreCollisionBetween(5, 6);
+		robot->ignoreCollisionBetween(6, 7);
 
 		// Setup parameter sizes for generalised position, velocity, acceleration, force and damping and set to zero
 		gc = Eigen::VectorXd::Zero(robot->getGeneralizedCoordinateDim());
 		gv = Eigen::VectorXd::Zero(robot->getDOF());
 		gf = Eigen::VectorXd::Zero(robot->getDOF());
 
-		// Default PD gains; can be tuned via params later if needed
-		kp_ = Eigen::VectorXd::Constant(robot->getGeneralizedCoordinateDim(), 500.0);
-		kd_ = Eigen::VectorXd::Constant(robot->getDOF(), 50000.0);
+		// Joint names used for ROS JointState publishing.
+		const auto joint_names_param = this->declare_parameter<std::vector<std::string>>(
+			"joint_names", std::vector<std::string>{});
+		if (joint_names_param.size() == static_cast<size_t>(robot->getDOF()))
+		{
+			joint_names_ = joint_names_param;
+		}
+		else
+		{
+			if (!joint_names_param.empty())
+			{
+				RCLCPP_WARN(this->get_logger(),
+							"Ignoring joint_names: expected %zu names, got %zu",
+							static_cast<size_t>(robot->getDOF()),
+							joint_names_param.size());
+			}
+
+			joint_names_.clear();
+			joint_names_.reserve(static_cast<size_t>(robot->getDOF()));
+			for (size_t i = 0; i < static_cast<size_t>(robot->getDOF()); ++i)
+			{
+				joint_names_.push_back("arm_j" + std::to_string(i + 1));
+			}
+			RCLCPP_WARN(this->get_logger(),
+						"Using default joint names arm_j1..arm_j%zu. Set joint_names in simulation.yaml to override.",
+						static_cast<size_t>(robot->getDOF()));
+		}
+
+		// PD gains from params so they can be tuned via YAML without recompiling.
+		const double kp_default = this->declare_parameter<double>("kp", 5000.0);
+		const double kd_default = this->declare_parameter<double>("kd", 500.0);
+		const auto kp_gains_param = this->declare_parameter<std::vector<double>>("kp_gains", std::vector<double>{});
+		const auto kd_gains_param = this->declare_parameter<std::vector<double>>("kd_gains", std::vector<double>{});
+		const size_t expected_kp_size = static_cast<size_t>(robot->getGeneralizedCoordinateDim());
+		const size_t expected_kd_size = static_cast<size_t>(robot->getDOF());
+
+		kp_ = Eigen::VectorXd::Constant(robot->getGeneralizedCoordinateDim(), kp_default);
+		kd_ = Eigen::VectorXd::Constant(robot->getDOF(), kd_default);
+
+		if (!kp_gains_param.empty())
+		{
+			if (kp_gains_param.size() == expected_kp_size)
+			{
+				kp_ = Eigen::Map<const Eigen::VectorXd>(kp_gains_param.data(), kp_gains_param.size());
+			}
+			else
+			{
+				RCLCPP_WARN(this->get_logger(),
+							"Ignoring kp_gains: expected %zu elements, got %zu",
+							expected_kp_size,
+							kp_gains_param.size());
+			}
+		}
+
+		if (!kd_gains_param.empty())
+		{
+			if (kd_gains_param.size() == expected_kd_size)
+			{
+				kd_ = Eigen::Map<const Eigen::VectorXd>(kd_gains_param.data(), kd_gains_param.size());
+			}
+			else
+			{
+				RCLCPP_WARN(this->get_logger(),
+							"Ignoring kd_gains: expected %zu elements, got %zu",
+							expected_kd_size,
+							kd_gains_param.size());
+			}
+		}
+
+		RCLCPP_INFO(this->get_logger(), "PD gains configured (kp size=%ld, kd size=%ld)", kp_.size(), kd_.size());
 
 		q_ref = joint_pos;
 		qd_ref = Eigen::VectorXd::Zero(N_joints);
@@ -208,6 +282,7 @@ private:
 		sensor_msgs::msg::JointState js;
 		int dof = robot->getDOF();
 		js.header.stamp = stamp;
+		js.name = joint_names_;
 		js.position.resize(dof);
 		js.velocity.resize(dof);
 		js.effort.resize(dof);
@@ -217,10 +292,22 @@ private:
 
 		for (int i = 0; i < dof; ++i)
 		{
+			double pos = gc[i];
+			double vel = gv[i];
+			double eff = gf[i];
+			if (!std::isfinite(pos) || !std::isfinite(vel) || !std::isfinite(eff))
+			{
+				RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+									 "Non-finite joint state detected at index %d. Clamping to zero.", i);
+				pos = 0.0;
+				vel = 0.0;
+				eff = 0.0;
+			}
+
 			// Add each joint to the jointstate message
-			js.position[i] = gc[i];
-			js.velocity[i] = gv[i];
-			js.effort[i] = gf[i];
+			js.position[i] = pos;
+			js.velocity[i] = vel;
+			js.effort[i] = eff;
 		}
 
 		// Publish joint states
@@ -282,6 +369,7 @@ private:
 	Eigen::VectorXd gc, gv, gf, init_state;
 	Eigen::VectorXd q_ref, qd_ref;
 	Eigen::VectorXd kp_, kd_;
+	std::vector<std::string> joint_names_;
 
 	// Declare ROS2 publishers, sibscribers and timers
 	rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_state_pub;

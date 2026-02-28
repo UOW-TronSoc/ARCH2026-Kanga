@@ -1,4 +1,10 @@
 /**:
   ros__parameters:
     use_sim_time: true # Use simulation time
+    joint_names: [arm_j1, arm_j2, arm_j3, arm_j4, arm_j5]
+    kp: 1500.0
+    kd: 1650.0
+    # Optional per-joint overrides (uncomment and set exact lengths if needed)
+    # kp_gains: [5000.0, 5000.0, 5000.0, 5000.0, 5000.0]
+    # kd_gains: [500.0, 500.0, 500.0, 500.0, 500.0]
     

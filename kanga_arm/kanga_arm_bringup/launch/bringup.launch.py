@@ -50,28 +50,28 @@ def generate_launch_description():
     )
 
     # # Setup control node
-    # control_node = Node(
-    #     package="kanga_arm_controller",
-    #     executable="joint_control_relay_node",
-    #     name="kanga_arm_joint_control_relay",
-    #     output="screen",
-    #     parameters=[
-    #         kanga_arm_config,
-    #         operation_params,
-    #     ]
-    # )
-
-        # Setup control node
     control_node = Node(
         package="kanga_arm_controller",
-        executable="control_node",
-        name="control_node",
+        executable="joint_control_relay_node",
+        name="kanga_arm_joint_control_relay",
         output="screen",
         parameters=[
             kanga_arm_config,
             operation_params,
         ]
     )
+
+        # Setup control node
+    # control_node = Node(
+    #     package="kanga_arm_controller",
+    #     executable="control_node",
+    #     name="control_node",
+    #     output="screen",
+    #     parameters=[
+    #         kanga_arm_config,
+    #         operation_params,
+    #     ]
+    # )
 
     return LaunchDescription([
         # Start Foxglove immediately for visualization

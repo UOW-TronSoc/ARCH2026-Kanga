@@ -5,13 +5,11 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
-#include <cmath>
 #include <chrono>
+#include <cmath>
 #include <fstream>
-#include <functional>
 #include <memory>
 #include <rclcpp/executors/single_threaded_executor.hpp>
-#include <sstream>
 #include <string>
 #include <thread>
 #include <vector>
@@ -45,6 +43,23 @@ std::string trim(const std::string & input)
 bool starts_with(const std::string & text, const std::string & prefix)
 {
     return text.size() >= prefix.size() && text.compare(0, prefix.size(), prefix) == 0;
+}
+
+std::string strip_quotes(std::string value)
+{
+    if (value.size() >= 2U && value.front() == '"' && value.back() == '"') {
+        value = value.substr(1, value.size() - 2U);
+    }
+    return value;
+}
+
+bool parse_bool(std::string value)
+{
+    std::transform(
+        value.begin(), value.end(), value.begin(),
+        [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+    return value == "true" || value == "1" || value == "yes";
 }
 
 std::vector<OdriveConfig> load_configs_from_yaml(const rclcpp::Logger & logger)
@@ -114,11 +129,7 @@ std::vector<OdriveConfig> load_configs_from_yaml(const rclcpp::Logger & logger)
         if (starts_with(trimmed, "- namespace:")) {
             push_current();
             current_valid = true;
-            auto value = trim(trimmed.substr(std::string("- namespace:").size()));
-            if (value.size() >= 2 && value.front() == '"' && value.back() == '"') {
-                value = value.substr(1, value.size() - 2);
-            }
-            current.ns = value;
+            current.ns = strip_quotes(trim(trimmed.substr(std::string("- namespace:").size())));
             continue;
         }
 
@@ -127,20 +138,12 @@ std::vector<OdriveConfig> load_configs_from_yaml(const rclcpp::Logger & logger)
         }
 
         if (starts_with(trimmed, "namespace:")) {
-            auto value = trim(trimmed.substr(std::string("namespace:").size()));
-            if (value.size() >= 2 && value.front() == '"' && value.back() == '"') {
-                value = value.substr(1, value.size() - 2);
-            }
-            current.ns = value;
+            current.ns = strip_quotes(trim(trimmed.substr(std::string("namespace:").size())));
             continue;
         }
 
         if (starts_with(trimmed, "invert:")) {
-            auto value = trim(trimmed.substr(std::string("invert:").size()));
-            std::transform(
-                value.begin(), value.end(), value.begin(),
-                [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
-            current.invert = (value == "true" || value == "1" || value == "yes");
+            current.invert = parse_bool(trim(trimmed.substr(std::string("invert:").size())));
             continue;
         }
     }
@@ -161,13 +164,12 @@ std::vector<OdriveConfig> load_configs_from_yaml(const rclcpp::Logger & logger)
 
 }  // namespace
 
-class WheelCommandMapper : public rclcpp::Node
+class WheelCommandMapperNew : public rclcpp::Node
 {
 public:
-    WheelCommandMapper() : Node("wheel_command_mapper")
+    WheelCommandMapperNew() : Node("wheel_command_mapper_new")
     {
-        const int axis_state_param = this->declare_parameter<int>(
-            "axis_requested_state", 8);
+        const int axis_state_param = this->declare_parameter<int>("axis_requested_state", 8);
         if (axis_state_param < 0) {
             RCLCPP_WARN(
                 this->get_logger(),
@@ -177,49 +179,19 @@ public:
             requested_axis_state_ = static_cast<uint32_t>(axis_state_param);
         }
 
-        max_wheel_velocity_ = this->declare_parameter<double>(
-            "max_wheel_velocity", 20.0);
+        max_wheel_velocity_ = this->declare_parameter<double>("max_wheel_velocity", 20.0);
 
-        auto configs = load_configs_from_yaml(this->get_logger());
-
-        for (const auto & cfg : configs) {
-            if (cfg.ns.empty()) {
-                continue;
-            }
-
-            ctrl_publishers_.push_back(
-                this->create_publisher<kanga_interfaces::msg::ControlMessage>(
-                    "/" + cfg.ns + "/control_message", 10));
-            invert_flags_.push_back(cfg.invert);
-            wheel_names_.push_back(cfg.ns);
-
-            const auto service_name = "/" + cfg.ns + "/request_axis_state";
-            axis_state_service_names_.push_back(service_name);
-            axis_state_clients_.push_back(
-                this->create_client<kanga_interfaces::srv::AxisState>(service_name));
-            axis_state_ready_.push_back(false);
-            axis_state_request_sent_.push_back(false);
-        }
-
-        if (ctrl_publishers_.empty()) {
-            RCLCPP_WARN(
-                this->get_logger(),
-                "No valid ODrive configurations found; control publishers will remain inactive");
-        } else {
-            RCLCPP_INFO(
-                this->get_logger(),
-                "Configured %zu ODrive control publishers", ctrl_publishers_.size());
-        }
+        initialize_wheels(load_configs_from_yaml(this->get_logger()));
 
         axis_state_timer_ = this->create_wall_timer(
             std::chrono::milliseconds(500),
-            std::bind(&WheelCommandMapper::tick_axis_state_requests, this));
+            std::bind(&WheelCommandMapperNew::tick_axis_state_requests, this));
 
         twist_sub_ = this->create_subscription<geometry_msgs::msg::Twist>(
             "/cmd_vel", 10,
-            std::bind(&WheelCommandMapper::twistCallback, this, std::placeholders::_1));
+            std::bind(&WheelCommandMapperNew::twist_callback, this, std::placeholders::_1));
 
-        RCLCPP_INFO(this->get_logger(), "wheel_command_mapper active");
+        RCLCPP_INFO(this->get_logger(), "wheel_command_mapper_new active");
     }
 
     void register_shutdown_hook()
@@ -228,18 +200,20 @@ public:
             return;
         }
 
-        auto shared_self = std::static_pointer_cast<WheelCommandMapper>(this->shared_from_this());
+        auto shared_self = std::static_pointer_cast<WheelCommandMapperNew>(this->shared_from_this());
         if (!shared_self) {
-            RCLCPP_WARN(this->get_logger(), "Failed to register shutdown hook: shared_from_this cast failed");
+            RCLCPP_WARN(
+                this->get_logger(),
+                "Failed to register shutdown hook: shared_from_this cast failed");
             return;
         }
 
-        std::weak_ptr<WheelCommandMapper> weak_self = shared_self;
+        std::weak_ptr<WheelCommandMapperNew> weak_self = shared_self;
         rclcpp::on_shutdown([weak_self]() {
             if (auto self = weak_self.lock()) {
                 std::thread([self]() {
                     try {
-                        self->command_axes_state(1U, "shutdown");
+                        self->request_axes_state_now(1U, "shutdown");
                     } catch (const std::exception & ex) {
                         RCLCPP_WARN(self->get_logger(), "Shutdown handler exception: %s", ex.what());
                     }
@@ -258,7 +232,47 @@ public:
 private:
     using AxisState = kanga_interfaces::srv::AxisState;
 
-    std::array<float, 4> computeWheelCommands(const geometry_msgs::msg::Twist & tw)
+    struct WheelEndpoint
+    {
+        std::string ns;
+        bool invert{false};
+        rclcpp::Publisher<kanga_interfaces::msg::ControlMessage>::SharedPtr ctrl_pub;
+        std::string axis_state_service_name;
+        rclcpp::Client<AxisState>::SharedPtr axis_state_client;
+        bool axis_state_ready{false};
+        bool axis_state_request_sent{false};
+    };
+
+    void initialize_wheels(const std::vector<OdriveConfig> & configs)
+    {
+        for (const auto & cfg : configs) {
+            if (cfg.ns.empty()) {
+                continue;
+            }
+
+            WheelEndpoint wheel;
+            wheel.ns = cfg.ns;
+            wheel.invert = cfg.invert;
+            wheel.ctrl_pub = this->create_publisher<kanga_interfaces::msg::ControlMessage>(
+                "/" + cfg.ns + "/control_message", 10);
+            wheel.axis_state_service_name = "/" + cfg.ns + "/request_axis_state";
+            wheel.axis_state_client =
+                this->create_client<AxisState>(wheel.axis_state_service_name);
+            wheels_.push_back(std::move(wheel));
+        }
+
+        if (wheels_.empty()) {
+            RCLCPP_WARN(
+                this->get_logger(),
+                "No valid ODrive configurations found; control publishers will remain inactive");
+        } else {
+            RCLCPP_INFO(
+                this->get_logger(),
+                "Configured %zu ODrive control publishers", wheels_.size());
+        }
+    }
+
+    std::array<float, 4> compute_wheel_commands(const geometry_msgs::msg::Twist & tw) const
     {
         constexpr double deg2rad = M_PI / 180.0;
         constexpr double theta = 51.0 * deg2rad;
@@ -279,8 +293,7 @@ private:
         double v_rr = alpha * (s * vx + c * vy + r * omega);
 
         const double max_vel = std::max(0.0, max_wheel_velocity_);
-        
-        auto clamp = [max_vel](double value) {
+        const auto clamp = [max_vel](double value) {
             if (max_vel == 0.0) {
                 return 0.0;
             }
@@ -301,42 +314,44 @@ private:
 
     void tick_axis_state_requests()
     {
-        if (axis_state_clients_.empty()) {
+        if (wheels_.empty()) {
             return;
         }
 
         bool all_ready = true;
 
-        for (size_t i = 0; i < axis_state_clients_.size(); ++i) {
-            if (axis_state_ready_[i]) {
+        for (size_t i = 0; i < wheels_.size(); ++i) {
+            auto & wheel = wheels_[i];
+            if (wheel.axis_state_ready) {
                 continue;
             }
 
             all_ready = false;
 
-            auto & client = axis_state_clients_[i];
-            if (!client->service_is_ready()) {
+            if (!wheel.axis_state_client->service_is_ready()) {
                 continue;
             }
 
-            if (!axis_state_request_sent_[i]) {
-                auto request = std::make_shared<AxisState::Request>();
-                request->axis_requested_state = requested_axis_state_;
-
-                auto future = client->async_send_request(
-                    request,
-                    [this, index = i](rclcpp::Client<AxisState>::SharedFuture future_response) {
-                        this->handle_axis_state_response(index, future_response);
-                    });
-                (void)future;
-
-                axis_state_request_sent_[i] = true;
-                RCLCPP_INFO(
-                    this->get_logger(),
-                    "Requested state %u for %s",
-                    requested_axis_state_,
-                    axis_state_service_names_[i].c_str());
+            if (wheel.axis_state_request_sent) {
+                continue;
             }
+
+            auto request = std::make_shared<AxisState::Request>();
+            request->axis_requested_state = requested_axis_state_;
+
+            auto future = wheel.axis_state_client->async_send_request(
+                request,
+                [this, index = i](rclcpp::Client<AxisState>::SharedFuture future_response) {
+                    this->handle_axis_state_response(index, future_response);
+                });
+            (void)future;
+
+            wheel.axis_state_request_sent = true;
+            RCLCPP_INFO(
+                this->get_logger(),
+                "Requested state %u for %s",
+                requested_axis_state_,
+                wheel.axis_state_service_name.c_str());
         }
 
         if (all_ready && axis_state_timer_) {
@@ -347,6 +362,12 @@ private:
     void handle_axis_state_response(
         size_t index, rclcpp::Client<AxisState>::SharedFuture future_response)
     {
+        if (index >= wheels_.size()) {
+            return;
+        }
+
+        auto & wheel = wheels_[index];
+
         try {
             auto response = future_response.get();
             if (!response) {
@@ -354,21 +375,21 @@ private:
             }
 
             if (response->active_errors != 0U) {
-                axis_state_ready_[index] = false;
-                axis_state_request_sent_[index] = false;
+                wheel.axis_state_ready = false;
+                wheel.axis_state_request_sent = false;
                 RCLCPP_WARN(
                     this->get_logger(),
                     "%s reported active_errors=%u; will retry state request",
-                    axis_state_service_names_[index].c_str(),
+                    wheel.axis_state_service_name.c_str(),
                     response->active_errors);
                 return;
             }
 
-            axis_state_ready_[index] = true;
+            wheel.axis_state_ready = true;
             RCLCPP_INFO(
                 this->get_logger(),
                 "%s acknowledged state request (axis_state=%u, result=%u)",
-                axis_state_service_names_[index].c_str(),
+                wheel.axis_state_service_name.c_str(),
                 response->axis_state,
                 response->procedure_result);
 
@@ -382,26 +403,26 @@ private:
                     "All axes ready; control commands will resume");
             }
         } catch (const std::exception & ex) {
-            axis_state_ready_[index] = false;
-            axis_state_request_sent_[index] = false;
+            wheel.axis_state_ready = false;
+            wheel.axis_state_request_sent = false;
             RCLCPP_WARN(
                 this->get_logger(),
                 "Failed to process response from %s: %s",
-                axis_state_service_names_[index].c_str(),
+                wheel.axis_state_service_name.c_str(),
                 ex.what());
         }
     }
 
     bool all_axes_ready() const
     {
-        return !axis_state_ready_.empty() &&
-               std::all_of(axis_state_ready_.begin(), axis_state_ready_.end(),
-                   [](bool ready) { return ready; });
+        return !wheels_.empty() &&
+               std::all_of(wheels_.begin(), wheels_.end(),
+                   [](const WheelEndpoint & wheel) { return wheel.axis_state_ready; });
     }
 
-    void twistCallback(const geometry_msgs::msg::Twist::SharedPtr msg)
+    void twist_callback(const geometry_msgs::msg::Twist::SharedPtr msg)
     {
-        auto cmds = computeWheelCommands(*msg);
+        const auto commands = compute_wheel_commands(*msg);
 
         if (!all_axes_ready()) {
             if (!waiting_to_publish_logged_) {
@@ -418,40 +439,20 @@ private:
 
         kanga_interfaces::msg::ControlMessage ctrl;
         ctrl.control_mode = 2;
-        ctrl.input_mode   = 2;
-        ctrl.input_pos    = 0.0F;
+        ctrl.input_mode = 2;
+        ctrl.input_pos = 0.0F;
 
-        const size_t count = std::min(ctrl_publishers_.size(), cmds.size());
-        if (count > 0U) {
-            std::ostringstream oss;
-            const size_t named = std::min(count, wheel_names_.size());
-            for (size_t i = 0; i < count; ++i) {
-                if (i > 0U) {
-                    oss << ", ";
-                }
-                if (i < named) {
-                    oss << wheel_names_[i];
-                } else {
-                    oss << "wheel" << i;
-                }
-                oss << '=' << cmds[i];
-            }
-
-            // RCLCPP_INFO_THROTTLE(
-            //     this->get_logger(), *this->get_clock(), 500,
-            //     "Wheel velocities: %s", oss.str().c_str());
-        }
-
+        const size_t count = std::min(wheels_.size(), commands.size());
         for (size_t i = 0; i < count; ++i) {
-            const float sign = invert_flags_[i] ? -1.0F : 1.0F;
-            ctrl.input_vel = sign * cmds[i];
-            ctrl_publishers_[i]->publish(ctrl);
+            const float sign = wheels_[i].invert ? -1.0F : 1.0F;
+            ctrl.input_vel = sign * commands[i];
+            wheels_[i].ctrl_pub->publish(ctrl);
         }
     }
 
     void command_axes_state(uint32_t target_state, const char * context)
     {
-        if (axis_state_clients_.empty() || shutdown_command_sent_) {
+        if (wheels_.empty() || shutdown_command_sent_) {
             return;
         }
 
@@ -462,15 +463,15 @@ private:
         init_options.auto_initialize_logging(false);
         helper_context->init(0, nullptr, init_options);
 
-        rclcpp::NodeOptions options;
-        options.context(helper_context);
-        options.use_global_arguments(false);
-        options.start_parameter_services(false);
-        options.start_parameter_event_publisher(false);
+        rclcpp::NodeOptions node_options;
+        node_options.context(helper_context);
+        node_options.use_global_arguments(false);
+        node_options.start_parameter_services(false);
+        node_options.start_parameter_event_publisher(false);
 
         auto helper_node = rclcpp::Node::make_shared(
-            "wheel_command_mapper_shutdown_helper",
-            options);
+            "wheel_command_mapper_new_shutdown_helper",
+            node_options);
         auto helper_logger = helper_node->get_logger();
 
         rclcpp::ExecutorOptions exec_options;
@@ -486,16 +487,16 @@ private:
         };
 
         std::vector<PendingCall> pending_calls;
-        pending_calls.reserve(axis_state_clients_.size());
+        pending_calls.reserve(wheels_.size());
 
-        for (const auto & service_name : axis_state_service_names_) {
-            auto client = helper_node->create_client<AxisState>(service_name);
+        for (const auto & wheel : wheels_) {
+            auto client = helper_node->create_client<AxisState>(wheel.axis_state_service_name);
 
             if (!client->wait_for_service(5s)) {
                 RCLCPP_WARN(
                     helper_logger,
                     "%s service unavailable during %s handling",
-                    service_name.c_str(),
+                    wheel.axis_state_service_name.c_str(),
                     context);
                 continue;
             }
@@ -504,7 +505,7 @@ private:
             request->axis_requested_state = target_state;
 
             PendingCall call;
-            call.service_name = service_name;
+            call.service_name = wheel.axis_state_service_name;
             call.client = client;
             auto future_and_request = client->async_send_request(request);
             call.future = future_and_request.future.share();
@@ -562,32 +563,26 @@ private:
         }
 
         executor.remove_node(helper_node);
-        helper_context->shutdown("wheel_command_mapper shutdown helper completed");
+        helper_context->shutdown("wheel_command_mapper_new shutdown helper completed");
         shutdown_command_sent_ = true;
     }
 
-    std::vector<rclcpp::Publisher<kanga_interfaces::msg::ControlMessage>::SharedPtr> ctrl_publishers_;
-    std::vector<bool> invert_flags_;
-    std::vector<std::string> wheel_names_;
+    std::vector<WheelEndpoint> wheels_;
     double max_wheel_velocity_{20.0};
+    uint32_t requested_axis_state_{8U};
 
-    std::vector<rclcpp::Client<AxisState>::SharedPtr> axis_state_clients_;
-    std::vector<std::string> axis_state_service_names_;
-    std::vector<bool> axis_state_ready_;
-    std::vector<bool> axis_state_request_sent_;
-    rclcpp::TimerBase::SharedPtr axis_state_timer_;
-    uint32_t requested_axis_state_{};
     bool waiting_to_publish_logged_{false};
     bool shutdown_hook_registered_{false};
     bool shutdown_command_sent_{false};
 
+    rclcpp::TimerBase::SharedPtr axis_state_timer_;
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr twist_sub_;
 };
 
 int main(int argc, char ** argv)
 {
     rclcpp::init(argc, argv);
-    auto node = std::make_shared<WheelCommandMapper>();
+    auto node = std::make_shared<WheelCommandMapperNew>();
     node->register_shutdown_hook();
     rclcpp::spin(node);
     node->request_axes_state_now(1U, "post-spin");

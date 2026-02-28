@@ -15,8 +15,12 @@ find_package(kanga_interfaces REQUIRED)
 add_executable(wheel_command_mapper src/wheel_command_mapper.cpp)
 ament_target_dependencies(wheel_command_mapper rclcpp geometry_msgs std_msgs kanga_interfaces)
 
+add_executable(wheel_command_mapper_new src/wheel_command_mapper_new.cpp)
+ament_target_dependencies(wheel_command_mapper_new rclcpp geometry_msgs std_msgs kanga_interfaces)
+
 install(TARGETS
   wheel_command_mapper
+  wheel_command_mapper_new
   DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY

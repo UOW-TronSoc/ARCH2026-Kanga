@@ -33,8 +33,13 @@ public:
 		desired_control_pub_ = this->create_publisher<sensor_msgs::msg::JointState>(
 			"joint_desired_control", 10);
 
+		publish_rate_hz_ = this->declare_parameter<double>("publish_rate_hz", 100.0);
+		const double safe_rate_hz = (publish_rate_hz_ > 0.0) ? publish_rate_hz_ : 100.0;
+		publish_period_seconds_ = 1.0 / safe_rate_hz;
+
 		timer_ = this->create_wall_timer(
-			std::chrono::milliseconds(1),
+			std::chrono::duration_cast<std::chrono::milliseconds>(
+				std::chrono::duration<double>(publish_period_seconds_)),
 			std::bind(&JointControlRelay::publishDesiredControl, this));
 
 		RCLCPP_INFO(this->get_logger(), "Kanga Arm joint control relay started");
@@ -59,7 +64,7 @@ private:
 	void publishDesiredControl()
 	{
 		const rclcpp::Time now = steady_clock_.now();
-		const double dt = 0.001;
+		const double dt = publish_period_seconds_;
 
 		std::vector<double> velocity(dof, 0.0);
 		{
@@ -102,6 +107,8 @@ private:
 	rclcpp::Clock steady_clock_{RCL_STEADY_TIME};
 	rclcpp::Time last_velocity_time_;
 	std::mutex command_mutex_;
+	double publish_rate_hz_{100.0};
+	double publish_period_seconds_{0.01};
 };
 
 int main(int argc, char **argv)
