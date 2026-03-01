@@ -148,6 +148,16 @@ private:
       std::lock_guard<std::mutex> lock(command_mutex_);
       const double stale_seconds = (now - last_velocity_time_).seconds();
       is_stale = stale_seconds > command_stale_timeout_s_;
+      if (is_stale) {
+        RCLCPP_WARN_THROTTLE(
+          this->get_logger(),
+          *this->get_clock(),
+          1000,
+          "Watchdog triggered: command stream stale for %.3f s (timeout=%.3f s). Holding position=%s",
+          stale_seconds,
+          command_stale_timeout_s_,
+          hold_position_on_stale_ ? "true" : "false");
+      }
       if (!is_stale) {
         raw_velocity = latest_velocity_;
       }
