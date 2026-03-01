@@ -7,3 +7,5 @@
     joint_min_limits: [-1.5708, -1.5708, -1.309, -3.66519, -3.14159]
     joint_max_limits: [1.5708, 2.44346, 2.26893, 0.0, 3.14159]
     joint_velocity_invert: [false, false, false, false, false]
+    # Max commanded joint velocity [rad/s] per joint [arm_j1..arm_j5]
+    joint_max_velocity: [10.0, 10.0, 10.0, 10.0, 10.0]

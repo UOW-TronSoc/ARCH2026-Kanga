@@ -3,6 +3,7 @@
 #include <chrono>
 #include <mutex>
 #include <algorithm>
+#include <cmath>
 #include <limits>
 
 class JointControlRelay : public rclcpp::Node
@@ -40,6 +41,8 @@ public:
       "joint_max_limits", std::vector<double>(dof, std::numeric_limits<double>::infinity()));
     joint_velocity_invert_ = this->declare_parameter<std::vector<bool>>(
       "joint_velocity_invert", std::vector<bool>(dof, false));
+    joint_max_velocity_ = this->declare_parameter<std::vector<double>>(
+      "joint_max_velocity", std::vector<double>(dof, std::numeric_limits<double>::infinity()));
 
     if (joint_min_limits_.size() < dof) {
       RCLCPP_WARN(this->get_logger(), "joint_min_limits has fewer than %zu entries; padding with -inf", dof);
@@ -62,6 +65,13 @@ public:
       joint_velocity_invert_.resize(dof);
     }
 
+    if (joint_max_velocity_.size() < dof) {
+      RCLCPP_WARN(this->get_logger(), "joint_max_velocity has fewer than %zu entries; padding with +inf", dof);
+      joint_max_velocity_.resize(dof, std::numeric_limits<double>::infinity());
+    } else if (joint_max_velocity_.size() > dof) {
+      joint_max_velocity_.resize(dof);
+    }
+
     for (size_t i = 0; i < dof; ++i) {
       if (joint_min_limits_[i] > joint_max_limits_[i]) {
         RCLCPP_WARN(
@@ -69,6 +79,13 @@ public:
           "Invalid limits on joint %zu (min > max). Swapping values.",
           i);
         std::swap(joint_min_limits_[i], joint_max_limits_[i]);
+      }
+      if (joint_max_velocity_[i] < 0.0) {
+        RCLCPP_WARN(
+          this->get_logger(),
+          "joint_max_velocity[%zu] is negative. Using absolute value.",
+          i);
+        joint_max_velocity_[i] = std::abs(joint_max_velocity_[i]);
       }
       current_position_[i] = std::clamp(current_position_[i], joint_min_limits_[i], joint_max_limits_[i]);
     }
@@ -79,6 +96,8 @@ public:
     publish_rate_hz_ = this->declare_parameter<double>("publish_rate_hz", 100.0);
     const double control_time_step_ms = this->declare_parameter<double>("control_time_step_ms", 10.0);
     max_velocity_slew_rate_ = this->declare_parameter<double>("max_velocity_slew_rate", 8.0);
+    hold_position_on_stale_ = this->declare_parameter<bool>("hold_position_on_stale", true);
+    command_stale_timeout_s_ = this->declare_parameter<double>("command_stale_timeout_s", 0.5);
     const double safe_rate_hz = (publish_rate_hz_ > 0.0) ? publish_rate_hz_ : 100.0;
     if (publish_rate_hz_ > 0.0) {
       publish_period_seconds_ = 1.0 / safe_rate_hz;
@@ -111,6 +130,7 @@ private:
       if (joint_velocity_invert_[i]) {
         velocity = -velocity;
       }
+      velocity = std::clamp(velocity, -joint_max_velocity_[i], joint_max_velocity_[i]);
       latest_velocity_[i] = velocity;
     }
     last_velocity_time_ = steady_clock_.now();
@@ -123,18 +143,29 @@ private:
     const double dt = publish_period_seconds_;
 
     std::vector<double> raw_velocity(dof, 0.0);
+    bool is_stale = true;
     {
       std::lock_guard<std::mutex> lock(command_mutex_);
       const double stale_seconds = (now - last_velocity_time_).seconds();
-      // Fail-safe: if command stream goes stale, decay to zero command.
-      if (stale_seconds <= 0.5) {
+      is_stale = stale_seconds > command_stale_timeout_s_;
+      if (!is_stale) {
         raw_velocity = latest_velocity_;
       }
+    }
+
+    if (is_stale && hold_position_on_stale_) {
+      // Immediate hold: stop target motion when upstream commands disappear.
+      std::fill(filtered_velocity_.begin(), filtered_velocity_.end(), 0.0);
     }
 
     std::vector<double> velocity(dof, 0.0);
     const double max_step = std::max(0.0, max_velocity_slew_rate_) * dt;
     for (size_t i = 0; i < dof; ++i) {
+      if (is_stale && hold_position_on_stale_) {
+        velocity[i] = 0.0;
+        continue;
+      }
+
       // Slew-rate limiting smooths step-like joystick inputs.
       const double dv = raw_velocity[i] - filtered_velocity_[i];
       if (dv > max_step) {
@@ -145,6 +176,8 @@ private:
         filtered_velocity_[i] = raw_velocity[i];
       }
 
+      filtered_velocity_[i] = std::clamp(
+        filtered_velocity_[i], -joint_max_velocity_[i], joint_max_velocity_[i]);
       velocity[i] = filtered_velocity_[i];
       current_position_[i] += velocity[i] * dt;
 
@@ -185,12 +218,15 @@ private:
   std::vector<double> joint_min_limits_;
   std::vector<double> joint_max_limits_;
   std::vector<bool> joint_velocity_invert_;
+  std::vector<double> joint_max_velocity_;
   rclcpp::Clock steady_clock_{RCL_STEADY_TIME};
   rclcpp::Time last_velocity_time_;
   std::mutex command_mutex_;
   double publish_rate_hz_{100.0};
   double publish_period_seconds_{0.01};
   double max_velocity_slew_rate_{8.0};
+  bool hold_position_on_stale_{true};
+  double command_stale_timeout_s_{0.5};
 };
 
 int main(int argc, char **argv)
