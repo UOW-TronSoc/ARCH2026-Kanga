@@ -49,12 +49,10 @@ public:
 			publish_rate_hz_ = 1.0 / publish_period_seconds_;
 		}
 
-		last_publish_time_ = steady_clock_.now();
-
-		timer_ = this->create_wall_timer(
-			std::chrono::duration_cast<std::chrono::milliseconds>(
-				std::chrono::duration<double>(publish_period_seconds_)),
-			std::bind(&JointControlRelay::publishDesiredControl, this));
+			timer_ = this->create_wall_timer(
+				std::chrono::duration_cast<std::chrono::milliseconds>(
+					std::chrono::duration<double>(publish_period_seconds_)),
+				std::bind(&JointControlRelay::publishDesiredControl, this));
 
 		RCLCPP_INFO(this->get_logger(), "Kanga Arm joint control relay started");
 	}
@@ -75,15 +73,10 @@ private:
 		last_velocity_time_ = steady_clock_.now();
 	}
 
-	void publishDesiredControl()
-	{
-		const rclcpp::Time now = steady_clock_.now();
-		double dt = (now - last_publish_time_).seconds();
-		if (!(dt > 0.0) || dt > 0.1)
+		void publishDesiredControl()
 		{
-			dt = publish_period_seconds_;
-		}
-		last_publish_time_ = now;
+			const rclcpp::Time now = steady_clock_.now();
+			const double dt = publish_period_seconds_;
 
 		std::vector<double> raw_velocity(dof, 0.0);
 		{
@@ -143,7 +136,6 @@ private:
 	std::vector<double> filtered_velocity_{std::vector<double>(dof, 0.0)};
 	rclcpp::Clock steady_clock_{RCL_STEADY_TIME};
 	rclcpp::Time last_velocity_time_;
-	rclcpp::Time last_publish_time_;
 	std::mutex command_mutex_;
 	double publish_rate_hz_{100.0};
 	double publish_period_seconds_{0.01};
