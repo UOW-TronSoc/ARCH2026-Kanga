@@ -14,6 +14,7 @@ find_package(geometry_msgs REQUIRED)
 
 find_package(Eigen3 REQUIRED)
 include_directories(
+    include
     ${EIGEN3_INCLUDE_DIRS}
 )
 
@@ -37,5 +38,8 @@ ament_target_dependencies(joint_control_relay_node rclcpp sensor_msgs)
 
 install(TARGETS control_node joint_control_relay_node DESTINATION lib/${PROJECT_NAME})
 
+install(DIRECTORY include/
+  DESTINATION include
+)
 
 ament_package()

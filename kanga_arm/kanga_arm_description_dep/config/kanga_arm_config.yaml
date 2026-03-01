@@ -9,3 +9,13 @@
     joint_velocity_invert: [false, false, false, false, false]
     # Max commanded joint velocity [rad/s] per joint [arm_j1..arm_j5]
     joint_max_velocity: [10.0, 10.0, 10.0, 10.0, 10.0]
+    # End-effector mode for world-space controller: roll_tool | scoop
+    end_effector_config: "roll_tool"
+    # Preferred tool transforms (row-major 4x4 homogeneous matrices).
+    roll_tool_transform_matrix: [1.0, 0.0, 0.0, 0.21657356, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0]
+    scoop_tool_transform_matrix: [1.0, 0.0, 0.0, 0.21657356, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0]
+    # Tool transforms are applied after the shared 4-DOF chain.
+    roll_tool_offset_xyz: [0.21657356, 0.0, 0.0]
+    roll_tool_offset_rpy: [0.0, 0.0, 0.0]
+    scoop_tool_offset_xyz: [0.21657356, 0.0, 0.0]
+    scoop_tool_offset_rpy: [0.0, 0.0, 0.0]

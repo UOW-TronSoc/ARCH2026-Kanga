@@ -3,41 +3,38 @@ import os
 
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, TimerAction
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
-from launch_xml.launch_description_sources import XMLLaunchDescriptionSource
 from ament_index_python.packages import get_package_share_directory
 
-def generate_launch_description():
+
+def generate_launch_description() -> LaunchDescription:
     end_effector_config = LaunchConfiguration("end_effector_config")
 
-    # Set up paths to the necessary configuration files and packages
     robot_description_path = get_package_share_directory("kanga_arm_description")
     operation_path = get_package_share_directory("kanga_arm_bringup")
     simulation_path = get_package_share_directory("kanga_arm_simulation")
-    
-    # Load config for leg configuration
+    joy_control_path = get_package_share_directory("kanga_arm_joy_control")
+
     kanga_arm_config = os.path.join(
         robot_description_path,
-        'config',
-        'kanga_arm_config.yaml'
-        )
-    
-    # Load config for operationparameters
+        "config",
+        "kanga_arm_config.yaml",
+    )
+
     operation_params = os.path.join(
         operation_path,
-        'config',
-        'operation.yaml'
-        )
-    
-    # Load config for simulation parameters
+        "config",
+        "operation.yaml",
+    )
+
     simulation_params = os.path.join(
         simulation_path,
-        'config',
-        'simulation.yaml'
-        )
-    
-    # Setup raisim node
+        "config",
+        "simulation.yaml",
+    )
+
     raisim_node = Node(
         package="kanga_arm_simulation",
         executable="raisim_bridge",
@@ -47,34 +44,27 @@ def generate_launch_description():
             {"robot_description_path": robot_description_path},
             kanga_arm_config,
             operation_params,
-            simulation_params
-        ]
+            simulation_params,
+        ],
     )
 
-    # # Setup control node
     control_node = Node(
         package="kanga_arm_controller",
-        executable="joint_control_relay_node",
-        name="kanga_arm_joint_control_relay",
+        executable="control_node",
+        name="kanga_arm_controller",
         output="screen",
         parameters=[
+            {"end_effector_config": end_effector_config},
             kanga_arm_config,
             operation_params,
-        ]
+        ],
     )
 
-        # Setup control node
-    # control_node = Node(
-    #     package="kanga_arm_controller",
-    #     executable="control_node",
-    #     name="control_node",
-    #     output="screen",
-    #     parameters=[
-    #         {"end_effector_config": end_effector_config},
-    #         kanga_arm_config,
-    #         operation_params,
-    #     ]
-    # )
+    joy_world_control_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(joy_control_path, "launch", "joy_arm_world_control.launch.py")
+        )
+    )
 
     return LaunchDescription([
         DeclareLaunchArgument(
@@ -82,15 +72,13 @@ def generate_launch_description():
             default_value="roll_tool",
             description="End-effector mode for world-space kinematics (roll_tool or scoop)",
         ),
-        # Start Foxglove immediately for visualization
-        # foxglove,
-
-        # After a delay, start the raisim node and control node
         TimerAction(
             period=2.0,
             actions=[
-                     raisim_node, 
-                     control_node, 
-                     ],
+                raisim_node,
+                control_node,
+                joy_world_control_launch,
+            ],
         ),
     ])
+

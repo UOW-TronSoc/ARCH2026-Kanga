@@ -263,7 +263,7 @@ private:
 
 		// Place visualization sphere at the end-effector with a fixed offset
 		static constexpr int kEndLinkBodyIndex = 5; // link_5 is the final body
-		const Eigen::Vector3d tool_offset(-0.0265, 0.0, -0.21657356); // meters
+		const Eigen::Vector3d tool_offset(0.0, 0.0, -0.21657356); // meters
 		raisim::Vec<3> ee_pos_rs;
 		raisim::Mat<3, 3> ee_rot_rs;
 		robot->getBodyPosition(kEndLinkBodyIndex, ee_pos_rs);
