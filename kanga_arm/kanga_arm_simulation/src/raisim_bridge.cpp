@@ -10,6 +10,8 @@
 #include <thread>
 #include <string>
 #include <cmath>
+#include <mutex>
+#include <algorithm>
 #include <Eigen/Dense>
 
 class RaisimBridge : public rclcpp::Node
@@ -18,7 +20,8 @@ public:
 	RaisimBridge() : Node("raisim_bridge")
 	{
 		// Setup ROS2 parameter time step for simulation, timers and models
-		pd_time_step_ms = this->declare_parameter<float>("pd_time_step_ms", 1.0);
+			pd_time_step_ms = this->declare_parameter<float>("pd_time_step_ms", 1.0);
+			stop_hold_velocity_epsilon_ = this->declare_parameter<double>("sim_stop_hold_velocity_epsilon", 0.02);
 
 		// Logging info
 		RCLCPP_INFO(this->get_logger(), "Time step for simulation: %f ms", pd_time_step_ms);
@@ -287,8 +290,29 @@ private:
 		js.velocity.resize(dof);
 		js.effort.resize(dof);
 
-		// Push PD targets into Raisim's internal controller
-		robot->setPdTarget(q_ref, qd_ref);
+			// Push PD targets into Raisim's internal controller
+			Eigen::VectorXd q_ref_local;
+			Eigen::VectorXd qd_ref_local;
+		{
+			std::lock_guard<std::mutex> lock(target_mutex_);
+				q_ref_local = q_ref;
+				qd_ref_local = qd_ref;
+			}
+
+			// In velocity-command mode, when target velocity is near zero, hold current position
+			// in sim to avoid spring-back to an integrated reference.
+			const size_t q_dim = static_cast<size_t>(q_ref_local.size());
+			const size_t qd_dim = static_cast<size_t>(qd_ref_local.size());
+			const size_t gc_dim = static_cast<size_t>(gc.size());
+			const size_t common_dim = std::min({q_dim, qd_dim, gc_dim});
+			for (size_t i = 0; i < common_dim; ++i)
+			{
+				if (std::abs(qd_ref_local[static_cast<Eigen::Index>(i)]) <= stop_hold_velocity_epsilon_)
+				{
+					q_ref_local[static_cast<Eigen::Index>(i)] = gc[static_cast<Eigen::Index>(i)];
+				}
+			}
+			robot->setPdTarget(q_ref_local, qd_ref_local);
 
 		for (int i = 0; i < dof; ++i)
 		{
@@ -339,6 +363,8 @@ private:
 			return;
 		}
 
+		std::lock_guard<std::mutex> lock(target_mutex_);
+
 		// Save desired positions
 		for (size_t i = 0; i < msg->position.size(); ++i)
 		{
@@ -370,6 +396,7 @@ private:
 	Eigen::VectorXd q_ref, qd_ref;
 	Eigen::VectorXd kp_, kd_;
 	std::vector<std::string> joint_names_;
+	std::mutex target_mutex_;
 
 	// Declare ROS2 publishers, sibscribers and timers
 	rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_state_pub;
@@ -383,7 +410,8 @@ private:
 	float pd_time_step_ms;
 	rclcpp::Publisher<rosgraph_msgs::msg::Clock>::SharedPtr clock_pub_;
 	int64_t sim_time_ns_ = 0; // simulated time in nanoseconds
-	double dt_ = 0.0;		  // seconds, equals world timestep
+		double dt_ = 0.0;		  // seconds, equals world timestep
+		double stop_hold_velocity_epsilon_{0.02};
 
 };
 

@@ -2,6 +2,7 @@
 #include <sensor_msgs/msg/joint_state.hpp>
 #include <chrono>
 #include <mutex>
+#include <algorithm>
 
 class JointControlRelay : public rclcpp::Node
 {
@@ -30,12 +31,25 @@ public:
 			"/kanga_arm/joint_control", 10,
 			std::bind(&JointControlRelay::jointControlCallback, this, std::placeholders::_1));
 
-		desired_control_pub_ = this->create_publisher<sensor_msgs::msg::JointState>(
-			"joint_desired_control", 10);
+			desired_control_pub_ = this->create_publisher<sensor_msgs::msg::JointState>(
+				"joint_desired_control", 10);
 
-		publish_rate_hz_ = this->declare_parameter<double>("publish_rate_hz", 100.0);
-		const double safe_rate_hz = (publish_rate_hz_ > 0.0) ? publish_rate_hz_ : 100.0;
-		publish_period_seconds_ = 1.0 / safe_rate_hz;
+			publish_rate_hz_ = this->declare_parameter<double>("publish_rate_hz", 100.0);
+			const double control_time_step_ms = this->declare_parameter<double>("control_time_step_ms", 10.0);
+			max_velocity_slew_rate_ = this->declare_parameter<double>("max_velocity_slew_rate", 8.0);
+			const double safe_rate_hz = (publish_rate_hz_ > 0.0) ? publish_rate_hz_ : 100.0;
+		if (publish_rate_hz_ > 0.0)
+		{
+			publish_period_seconds_ = 1.0 / safe_rate_hz;
+		}
+		else
+		{
+			const double safe_control_time_step_ms = std::max(control_time_step_ms, 1.0);
+			publish_period_seconds_ = safe_control_time_step_ms * 1e-3;
+			publish_rate_hz_ = 1.0 / publish_period_seconds_;
+		}
+
+		last_publish_time_ = steady_clock_.now();
 
 		timer_ = this->create_wall_timer(
 			std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -64,20 +78,42 @@ private:
 	void publishDesiredControl()
 	{
 		const rclcpp::Time now = steady_clock_.now();
-		const double dt = publish_period_seconds_;
+		double dt = (now - last_publish_time_).seconds();
+		if (!(dt > 0.0) || dt > 0.1)
+		{
+			dt = publish_period_seconds_;
+		}
+		last_publish_time_ = now;
 
-		std::vector<double> velocity(dof, 0.0);
+		std::vector<double> raw_velocity(dof, 0.0);
 		{
 			std::lock_guard<std::mutex> lock(command_mutex_);
 			const double stale_seconds = (now - last_velocity_time_).seconds();
 			if (stale_seconds <= 0.5)
 			{
-				velocity = latest_velocity_;
+				raw_velocity = latest_velocity_;
 			}
 		}
 
+		std::vector<double> velocity(dof, 0.0);
+		const double max_step = std::max(0.0, max_velocity_slew_rate_) * dt;
 		for (size_t i = 0; i < dof; ++i)
 		{
+			const double dv = raw_velocity[i] - filtered_velocity_[i];
+			if (dv > max_step)
+			{
+				filtered_velocity_[i] += max_step;
+			}
+			else if (dv < -max_step)
+			{
+				filtered_velocity_[i] -= max_step;
+			}
+			else
+			{
+				filtered_velocity_[i] = raw_velocity[i];
+			}
+
+			velocity[i] = filtered_velocity_[i];
 			current_position_[i] += velocity[i] * dt;
 		}
 
@@ -104,11 +140,14 @@ private:
 	std::vector<double> init_pos_;
 	std::vector<double> current_position_;
 	std::vector<double> latest_velocity_;
+	std::vector<double> filtered_velocity_{std::vector<double>(dof, 0.0)};
 	rclcpp::Clock steady_clock_{RCL_STEADY_TIME};
 	rclcpp::Time last_velocity_time_;
+	rclcpp::Time last_publish_time_;
 	std::mutex command_mutex_;
 	double publish_rate_hz_{100.0};
 	double publish_period_seconds_{0.01};
+	double max_velocity_slew_rate_{8.0};
 };
 
 int main(int argc, char **argv)

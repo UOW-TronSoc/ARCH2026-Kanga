@@ -2,4 +2,6 @@
   ros__parameters:
     pd_time_step_ms: 1.0  # Time step in milliseconds
     control_time_step_ms: 1.0  # Control time step in milliseconds
+    publish_rate_hz: 1000.0  # joint_control_relay publish/update rate
+    max_velocity_slew_rate: 6.0  # rad/s^2, smooths joystick velocity changes
     use_sim_time: true # Use simulation time

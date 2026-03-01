@@ -19,9 +19,9 @@ def generate_launch_description() -> LaunchDescription:
         name='joy_to_joint_control',
         output='screen',
         parameters=[{
-            'axis_indices': [0, 1, 2, 3],
-            'button_negative_j5': 9,
-            'button_positive_j5': 10,
+            'axis_indices': [0, 1, 3, 2],
+            'button_negative_j5': 10,
+            'button_positive_j5': 9,
             'joint_control_topic': '/kanga_arm/joint_control',
         }],
     )
