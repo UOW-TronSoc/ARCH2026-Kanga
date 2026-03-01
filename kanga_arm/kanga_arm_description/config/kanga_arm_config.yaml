@@ -3,3 +3,7 @@
     # joint_initial_positions: [0.0, -1.57079632679, 2.87979326579, 0.0, 0.0] # [hipAA, hipFE, kneeFE]
     joint_initial_positions: [0.0, 0.0, 0.0, 0.0, 0.0] # [hipAA, hipFE, kneeFE]
     link_lengths: [0.084, 0.45, 0.39, 0.105, 0.21657356] # 26.5
+    # Joint limits [rad] from kanga_arm.urdf for [arm_j1, arm_j2, arm_j3, arm_j4, arm_j5]
+    joint_min_limits: [-1.5708, -1.5708, -1.309, -3.66519, -3.14159]
+    joint_max_limits: [1.5708, 2.44346, 2.26893, 0.0, 3.14159]
+    joint_velocity_invert: [true, false, false, false, false]
