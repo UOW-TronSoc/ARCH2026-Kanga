@@ -18,7 +18,7 @@ if(BUILD_RAISIM_BRIDGE)
   find_package(std_msgs REQUIRED)
 
   # RaiSim stuffs
-  set(RAISIM_DEFAULT_PREFIX "/home/hunter/raisim/raisimLib/raisim/linux")
+  set(RAISIM_DEFAULT_PREFIX "/home/hunter/Documents/github/importedRepos/raisimLib/raisim/linux")
   if(EXISTS "${RAISIM_DEFAULT_PREFIX}")
     list(PREPEND CMAKE_PREFIX_PATH "${RAISIM_DEFAULT_PREFIX}")
   endif()
