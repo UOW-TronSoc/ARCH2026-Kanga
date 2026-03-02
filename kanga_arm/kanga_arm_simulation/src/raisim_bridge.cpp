@@ -11,20 +11,73 @@
 #include <string>
 #include <cmath>
 #include <mutex>
+#include <array>
 #include <algorithm>
+#include <vector>
 #include <Eigen/Dense>
 
 class RaisimBridge : public rclcpp::Node
 {
 public:
-	RaisimBridge() : Node("raisim_bridge")
-	{
+		RaisimBridge() : Node("raisim_bridge")
+		{
 		// Setup ROS2 parameter time step for simulation, timers and models
 			pd_time_step_ms = this->declare_parameter<float>("pd_time_step_ms", 1.0);
 			stop_hold_velocity_epsilon_ = this->declare_parameter<double>("sim_stop_hold_velocity_epsilon", 0.02);
 
-		// Logging info
-		RCLCPP_INFO(this->get_logger(), "Time step for simulation: %f ms", pd_time_step_ms);
+			// Logging info
+			RCLCPP_INFO(this->get_logger(), "Time step for simulation: %f ms", pd_time_step_ms);
+
+			fk_validation_enabled_ = this->declare_parameter<bool>("fk_validation_enabled", true);
+			const auto fk_validation_offset_param = this->declare_parameter<std::vector<double>>(
+				"fk_validation_offset_xyz", std::vector<double>{0.06, -0.235, -2.0});
+			if (fk_validation_offset_param.size() == 3U)
+			{
+				fk_validation_offset_ = Eigen::Vector3d(
+					fk_validation_offset_param[0],
+					fk_validation_offset_param[1],
+					fk_validation_offset_param[2]);
+			}
+			else
+			{
+				RCLCPP_WARN(
+					this->get_logger(),
+					"fk_validation_offset_xyz must have 3 elements. Using default [0.06, -0.235, -2.0].");
+			}
+			fk_validation_log_period_ms_ = this->declare_parameter<int>(
+				"fk_validation_log_period_ms", 1000);
+			end_effector_config_ = this->declare_parameter<std::string>("end_effector_config", "roll_tool");
+
+			const auto link_lengths_param = this->declare_parameter<std::vector<double>>(
+				"link_lengths", std::vector<double>{});
+			const auto roll_tool_tf_param = this->declare_parameter<std::vector<double>>(
+				"roll_tool_transform_matrix", std::vector<double>{});
+			const auto scoop_tool_tf_param = this->declare_parameter<std::vector<double>>(
+				"scoop_tool_transform_matrix", std::vector<double>{});
+			if (link_lengths_param.size() > 0)
+			{
+				dh_d_[0] = link_lengths_param[0];
+			}
+			if (link_lengths_param.size() > 1)
+			{
+				dh_a_[1] = -std::abs(link_lengths_param[1]);
+			}
+			if (link_lengths_param.size() > 2)
+			{
+				dh_a_[2] = -std::abs(link_lengths_param[2]);
+			}
+			if (!vectorToMatrix4(roll_tool_tf_param, roll_tool_tf_))
+			{
+				const double roll_tool_d =
+					(link_lengths_param.size() > 4) ? link_lengths_param[4] : 0.241725;
+				roll_tool_tf_ = dhTransform(0.0, roll_tool_d, 0.0, 0.0);
+			}
+			if (!vectorToMatrix4(scoop_tool_tf_param, scoop_tool_tf_))
+			{
+				const double scoop_tool_d =
+					(link_lengths_param.size() > 4) ? link_lengths_param[4] : 0.230;
+				scoop_tool_tf_ = dhTransform(0.0, scoop_tool_d, 0.0, 0.0);
+			}
 
 		// Setup initial joint positions
 		this->declare_parameter<std::vector<double>>("joint_initial_positions", std::vector<double>{});
@@ -108,6 +161,25 @@ public:
 						static_cast<size_t>(robot->getDOF()));
 		}
 
+		joint_encoder_invert_ = this->declare_parameter<std::vector<bool>>(
+			"joint_encoder_invert", std::vector<bool>(static_cast<size_t>(robot->getDOF()), false));
+		if (joint_encoder_invert_.size() < static_cast<size_t>(robot->getDOF()))
+		{
+			RCLCPP_WARN(
+				this->get_logger(),
+				"joint_encoder_invert has fewer than %zu entries; padding with false.",
+				static_cast<size_t>(robot->getDOF()));
+			joint_encoder_invert_.resize(static_cast<size_t>(robot->getDOF()), false);
+		}
+		else if (joint_encoder_invert_.size() > static_cast<size_t>(robot->getDOF()))
+		{
+			RCLCPP_WARN(
+				this->get_logger(),
+				"joint_encoder_invert has more than %zu entries; truncating extras.",
+				static_cast<size_t>(robot->getDOF()));
+			joint_encoder_invert_.resize(static_cast<size_t>(robot->getDOF()));
+		}
+
 		// PD gains from params so they can be tuned via YAML without recompiling.
 		const double kp_default = this->declare_parameter<double>("kp", 5000.0);
 		const double kd_default = this->declare_parameter<double>("kd", 500.0);
@@ -186,10 +258,10 @@ public:
 		// Create Publisher for robot joint states
 		joint_state_pub = this->create_publisher<sensor_msgs::msg::JointState>("joint_states", 10);
 
-		// Create subscription to control node topic for joint effort commands
-		desired_cmd_sub_ = this->create_subscription<sensor_msgs::msg::JointState>(
-			"joint_desired_control", 10,
-			std::bind(&RaisimBridge::effortCommandCallback, this, std::placeholders::_1));
+			// Create subscription to control node topic for joint effort commands
+			desired_cmd_sub_ = this->create_subscription<sensor_msgs::msg::JointState>(
+				"joint_desired_control", 10,
+				std::bind(&RaisimBridge::effortCommandCallback, this, std::placeholders::_1));
 
 		// Apply PD gains to the articulated system
 		robot->setPdGains(kp_, kd_);
@@ -268,8 +340,31 @@ private:
 		raisim::Mat<3, 3> ee_rot_rs;
 		robot->getBodyPosition(kEndLinkBodyIndex, ee_pos_rs);
 		robot->getBodyOrientation(kEndLinkBodyIndex, ee_rot_rs); // world_R_link
-		Eigen::Vector3d sphere_pos = ee_pos_rs.e() + ee_rot_rs.e() * tool_offset;
-		comSphere->setPosition(sphere_pos[0], sphere_pos[1], sphere_pos[2]);
+			Eigen::Vector3d sphere_pos = ee_pos_rs.e() + ee_rot_rs.e() * tool_offset;
+			comSphere->setPosition(sphere_pos[0], sphere_pos[1], sphere_pos[2]);
+
+			if (fk_validation_enabled_)
+			{
+				Eigen::VectorXd q_for_fk = Eigen::VectorXd::Zero(5);
+				const size_t q_dim = std::min<size_t>(5, static_cast<size_t>(gc.size()));
+				for (size_t i = 0; i < q_dim; ++i)
+				{
+					q_for_fk[static_cast<Eigen::Index>(i)] = applyEncoderInversion(
+						i, gc[static_cast<Eigen::Index>(i)]);
+				}
+
+				const Eigen::Vector3d ee_current = sphere_pos + fk_validation_offset_;
+				const Eigen::Vector3d fk_calculated = computeFkPosition(q_for_fk);
+				const int throttle_ms = std::max(1, fk_validation_log_period_ms_);
+
+				RCLCPP_INFO_THROTTLE(
+					this->get_logger(), *this->get_clock(), throttle_ms,
+					"FK check | q(rad)=[%.5f, %.5f, %.5f, %.5f, %.5f] | "
+					"ee_current=(%.4f, %.4f, %.4f) | fk_calculated=(%.4f, %.4f, %.4f)",
+					q_for_fk(0), q_for_fk(1), q_for_fk(2), q_for_fk(3), q_for_fk(4),
+					ee_current.x(), ee_current.y(), ee_current.z(),
+					fk_calculated.x(), fk_calculated.y(), fk_calculated.z());
+			}
 
 		// Build a single time stamp for this step in sim time
 		builtin_interfaces::msg::Time stamp;
@@ -329,8 +424,8 @@ private:
 			}
 
 			// Add each joint to the jointstate message
-			js.position[i] = pos;
-			js.velocity[i] = vel;
+			js.position[i] = applyEncoderInversion(static_cast<size_t>(i), pos);
+			js.velocity[i] = applyEncoderInversion(static_cast<size_t>(i), vel);
 			js.effort[i] = eff;
 		}
 
@@ -344,46 +439,114 @@ private:
 		sim_time_ns_ += static_cast<int64_t>(dt_ * 1e9);
 	}
 
-	/*
-	 * Callback function to handle incoming joint effort commands
-	 * This function is triggered when a new message is received on the "joint_desired_control" topic
-	 * It saves the control reference commands to memory for the next simulation step
-	 *
-	 * @param msg The incoming message containing joint positions, velocities, and efforts
-	 */
-	void effortCommandCallback(const sensor_msgs::msg::JointState::SharedPtr msg)
-	{
-
-		// RCLCPP_INFO(this->get_logger(), "test");
-
-		// Make sure control commands match the robot dof
-		if (msg->position.size() != robot->getDOF())
+		bool vectorToMatrix4(const std::vector<double> & values, Eigen::Matrix4d & out)
 		{
-			RCLCPP_WARN(this->get_logger(), "Received effort command of wrong size: %zu (expected %zu)", msg->position.size(), robot->getDOF());
-			return;
+			if (values.size() != 16U)
+			{
+				return false;
+			}
+
+			Eigen::Matrix4d matrix = Eigen::Matrix4d::Zero();
+			for (int r = 0; r < 4; ++r)
+			{
+				for (int c = 0; c < 4; ++c)
+				{
+					matrix(r, c) = values[static_cast<size_t>(r * 4 + c)];
+				}
+			}
+			matrix.row(3) = Eigen::RowVector4d(0.0, 0.0, 0.0, 1.0);
+			out = matrix;
+			return true;
 		}
 
-		std::lock_guard<std::mutex> lock(target_mutex_);
-
-		// Save desired positions
-		for (size_t i = 0; i < msg->position.size(); ++i)
+		static Eigen::Matrix4d dhTransform(double theta, double d, double a, double alpha)
 		{
-			q_ref[i] = msg->position[i];
+			const double ct = std::cos(theta);
+			const double st = std::sin(theta);
+			const double ca = std::cos(alpha);
+			const double sa = std::sin(alpha);
+
+			Eigen::Matrix4d t = Eigen::Matrix4d::Identity();
+			t(0, 0) = ct;
+			t(0, 1) = -st * ca;
+			t(0, 2) = st * sa;
+			t(0, 3) = a * ct;
+			t(1, 0) = st;
+			t(1, 1) = ct * ca;
+			t(1, 2) = -ct * sa;
+			t(1, 3) = a * st;
+			t(2, 1) = sa;
+			t(2, 2) = ca;
+			t(2, 3) = d;
+			return t;
 		}
 
-		// Save desired velocities if provided; otherwise zero
-		if (msg->velocity.size() == msg->position.size())
+		const Eigen::Matrix4d & activeToolTransform() const
 		{
-			for (size_t i = 0; i < msg->velocity.size(); ++i)
-				qd_ref[i] = msg->velocity[i];
-		}
-		else
-		{
-			qd_ref.setZero();
+			if (end_effector_config_ == "scoop")
+			{
+				return scoop_tool_tf_;
+			}
+			return roll_tool_tf_;
 		}
 
-		return;
-	}
+		Eigen::Vector3d computeFkPosition(const Eigen::VectorXd & q) const
+		{
+			Eigen::Matrix4d t = Eigen::Matrix4d::Identity();
+			const size_t active_dof = std::min<size_t>(4, static_cast<size_t>(q.size()));
+			for (size_t i = 0; i < active_dof; ++i)
+			{
+				const double theta = theta_offsets_[i] + q[static_cast<Eigen::Index>(i)];
+				t = t * dhTransform(theta, dh_d_[i], dh_a_[i], dh_alpha_[i]);
+			}
+			t = t * activeToolTransform();
+			return t.block<3, 1>(0, 3);
+		}
+
+		double applyEncoderInversion(size_t index, double value) const
+		{
+			if (index < joint_encoder_invert_.size() && joint_encoder_invert_[index])
+			{
+				return -value;
+			}
+			return value;
+		}
+
+		/*
+		 * Callback function to handle incoming joint effort commands
+		 * This function is triggered when a new message is received on the "joint_desired_control" topic
+		 * It saves the control reference commands to memory for the next simulation step
+		 *
+		 * @param msg The incoming message containing joint positions, velocities, and efforts
+		 */
+		void effortCommandCallback(const sensor_msgs::msg::JointState::SharedPtr msg)
+		{
+			// Make sure control commands match the robot dof
+			if (msg->position.size() != robot->getDOF())
+			{
+				RCLCPP_WARN(this->get_logger(), "Received effort command of wrong size: %zu (expected %zu)", msg->position.size(), robot->getDOF());
+				return;
+			}
+
+			std::lock_guard<std::mutex> lock(target_mutex_);
+
+			// Save desired positions
+			for (size_t i = 0; i < msg->position.size(); ++i)
+			{
+				q_ref[i] = msg->position[i];
+			}
+
+			// Save desired velocities if provided; otherwise zero
+			if (msg->velocity.size() == msg->position.size())
+			{
+				for (size_t i = 0; i < msg->velocity.size(); ++i)
+					qd_ref[i] = msg->velocity[i];
+			}
+			else
+			{
+				qd_ref.setZero();
+			}
+		}
 
 
 	// Raisim control variables
@@ -396,22 +559,34 @@ private:
 	Eigen::VectorXd q_ref, qd_ref;
 	Eigen::VectorXd kp_, kd_;
 	std::vector<std::string> joint_names_;
+	std::vector<bool> joint_encoder_invert_;
 	std::mutex target_mutex_;
 
 	// Declare ROS2 publishers, sibscribers and timers
-	rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_state_pub;
-	rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr desired_cmd_sub_;
-	rclcpp::TimerBase::SharedPtr timer_;
+		rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_state_pub;
+		rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr desired_cmd_sub_;
+		rclcpp::TimerBase::SharedPtr timer_;
 
 	// Declare internal timer variables
 	std::chrono::_V2::system_clock::time_point startTime;
 
 	// Declare parameters for simulation and control
-	float pd_time_step_ms;
-	rclcpp::Publisher<rosgraph_msgs::msg::Clock>::SharedPtr clock_pub_;
-	int64_t sim_time_ns_ = 0; // simulated time in nanoseconds
+		float pd_time_step_ms;
+		rclcpp::Publisher<rosgraph_msgs::msg::Clock>::SharedPtr clock_pub_;
+		int64_t sim_time_ns_ = 0; // simulated time in nanoseconds
 		double dt_ = 0.0;		  // seconds, equals world timestep
 		double stop_hold_velocity_epsilon_{0.02};
+
+		bool fk_validation_enabled_{true};
+		Eigen::Vector3d fk_validation_offset_{0.06, -0.235, -2.0};
+		int fk_validation_log_period_ms_{1000};
+		std::string end_effector_config_{"roll_tool"};
+		std::array<double, 4> dh_d_{0.084, 0.111, -0.0905, 0.06844};
+		std::array<double, 4> dh_a_{0.0, -0.449997, -0.390, 0.0};
+		std::array<double, 4> dh_alpha_{-0.5 * M_PI, 0.0, 0.0, 0.5 * M_PI};
+		std::array<double, 4> theta_offsets_{0.0, 0.5 * M_PI, 0.5 * M_PI, 0.0};
+		Eigen::Matrix4d roll_tool_tf_{dhTransform(0.0, 0.241725, 0.0, 0.0)};
+		Eigen::Matrix4d scoop_tool_tf_{dhTransform(0.0, 0.230, 0.0, 0.0)};
 
 };
 

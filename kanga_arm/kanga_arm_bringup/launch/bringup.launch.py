@@ -2,19 +2,23 @@
 import os
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, TimerAction
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.conditions import IfCondition, UnlessCondition
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
-from launch_xml.launch_description_sources import XMLLaunchDescriptionSource
 from ament_index_python.packages import get_package_share_directory
 
 def generate_launch_description():
-    end_effector_config = LaunchConfiguration("end_effector_config")
+    use_sim = LaunchConfiguration("use_sim")
+    use_joy = LaunchConfiguration("use_joy")
 
     # Set up paths to the necessary configuration files and packages
     robot_description_path = get_package_share_directory("kanga_arm_description")
     operation_path = get_package_share_directory("kanga_arm_bringup")
     simulation_path = get_package_share_directory("kanga_arm_simulation")
+    arm_drive_path = get_package_share_directory("kanga_arm_drive")
+    joy_control_path = get_package_share_directory("kanga_arm_joy_control")
     
     # Load config for leg configuration
     kanga_arm_config = os.path.join(
@@ -37,21 +41,23 @@ def generate_launch_description():
         'simulation.yaml'
         )
     
-    # Setup raisim node
+    # Setup raisim node (sim mode)
     raisim_node = Node(
         package="kanga_arm_simulation",
         executable="raisim_bridge",
         name="raisim_bridge",
         output="screen",
+        condition=IfCondition(use_sim),
         parameters=[
             {"robot_description_path": robot_description_path},
             kanga_arm_config,
             operation_params,
-            simulation_params
+            simulation_params,
+            {"use_sim_time": use_sim},
         ]
     )
 
-    # # Setup control node
+    # Setup relay node (always runs; behavior selected by downstream stack)
     control_node = Node(
         package="kanga_arm_controller",
         executable="joint_control_relay_node",
@@ -60,37 +66,38 @@ def generate_launch_description():
         parameters=[
             kanga_arm_config,
             operation_params,
+            {"use_sim_time": use_sim},
         ]
     )
 
-        # Setup control node
-    # control_node = Node(
-    #     package="kanga_arm_controller",
-    #     executable="control_node",
-    #     name="control_node",
-    #     output="screen",
-    #     parameters=[
-    #         {"end_effector_config": end_effector_config},
-    #         kanga_arm_config,
-    #         operation_params,
-    #     ]
-    # )
+    # Setup hardware arm stack (real robot mode)
+    arm_drive_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(arm_drive_path, "launch", "arm_drive_with_mapper.launch.py")
+        ),
+        condition=UnlessCondition(use_sim),
+    )
+
+    joy_joint_control_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(joy_control_path, "launch", "joy_arm_joint_control.launch.py")
+        ),
+        condition=IfCondition(use_joy),
+    )
 
     return LaunchDescription([
         DeclareLaunchArgument(
-            "end_effector_config",
-            default_value="roll_tool",
-            description="End-effector mode for world-space kinematics (roll_tool or scoop)",
+            "use_sim",
+            default_value="true",
+            description="If true: run Raisim simulation. If false: run hardware arm drive stack.",
         ),
-        # Start Foxglove immediately for visualization
-        # foxglove,
-
-        # After a delay, start the raisim node and control node
-        TimerAction(
-            period=2.0,
-            actions=[
-                     raisim_node, 
-                     control_node, 
-                     ],
+        DeclareLaunchArgument(
+            "use_joy",
+            default_value="true",
+            description="If true: start joystick input -> /kanga_arm/joint_control.",
         ),
+        control_node,
+        joy_joint_control_launch,
+        raisim_node,
+        arm_drive_launch,
     ])

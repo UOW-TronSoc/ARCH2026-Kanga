@@ -41,8 +41,9 @@ public:
     // Defaults from provided symbolic/DH model (SI units).
     d_ = {0.084, 0.111, -0.0905, 0.06844};
     a_ = {0.0, -0.449997, -0.390, 0.0};
-    alpha_ = {-M_PI_2, 0.0, 0.0, M_PI_2};
-    theta_offsets_ = {0.0, M_PI_2, M_PI_2, 0.0};
+    // Angles are stored in radians (ROS joint states are radians).
+    alpha_ = {-0.5 * M_PI, 0.0, 0.0, 0.5 * M_PI};
+    theta_offsets_ = {0.0, 0.5 * M_PI, 0.5 * M_PI, 0.0};
 
     // Final tool transform defaults from provided model.
     roll_tool_tf_ = dhTransform(0.0, 0.241725, 0.0, 0.0);
@@ -62,19 +63,14 @@ public:
     if (link_lengths.size() > 2) {
       a_[2] = -std::abs(link_lengths[2]);
     }
-    if (link_lengths.size() > 3) {
-      d_[3] = link_lengths[3];
-    }
     if (link_lengths.size() > 4) {
-      // Legacy configs often specified terminal reach as X offset. Keep this as
-      // a compatibility fallback unless explicit tool transforms are configured.
+      // Legacy configs may provide a terminal tool length. For DH consistency,
+      // interpret this as a D offset (local Z translation), not X.
       if (!roll_tool_override_) {
-        roll_tool_tf_ = Eigen::Matrix4d::Identity();
-        roll_tool_tf_(0, 3) = link_lengths[4];
+        roll_tool_tf_ = dhTransform(0.0, link_lengths[4], 0.0, 0.0);
       }
       if (!scoop_tool_override_) {
-        scoop_tool_tf_ = Eigen::Matrix4d::Identity();
-        scoop_tool_tf_(0, 3) = link_lengths[4];
+        scoop_tool_tf_ = dhTransform(0.0, link_lengths[4], 0.0, 0.0);
       }
     }
   }

@@ -20,7 +20,7 @@ def generate_launch_description() -> LaunchDescription:
         output='screen',
         parameters=[{
             # Axis mapping: 0->X, 1->Y, 2->Z, 3->pitch.
-            'axis_indices': [0, 1, 2, 3],
+            'axis_indices': [1, 0, 3, 2],
             # Reuse the same button pair currently used for joint-5 control.
             'button_negative_roll': 10,
             'button_positive_roll': 9,

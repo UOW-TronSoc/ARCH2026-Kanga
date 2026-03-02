@@ -37,8 +37,12 @@ public:
 			"joint_min_limits", std::vector<double>(dof, -std::numeric_limits<double>::infinity()));
 		joint_max_limits_ = this->declare_parameter<std::vector<double>>(
 			"joint_max_limits", std::vector<double>(dof, std::numeric_limits<double>::infinity()));
+		joint_velocity_invert_ = this->declare_parameter<std::vector<bool>>(
+			"joint_velocity_invert", std::vector<bool>(dof, false));
 		joint_max_velocity_ = this->declare_parameter<std::vector<double>>(
 			"joint_max_velocity", std::vector<double>(dof, std::numeric_limits<double>::infinity()));
+		world_max_velocity_ = this->declare_parameter<std::vector<double>>(
+			"world_max_velocity", std::vector<double>(6, std::numeric_limits<double>::infinity()));
 		hold_position_on_stale_ = this->declare_parameter<bool>("hold_position_on_stale", true);
 		command_stale_timeout_s_ = this->declare_parameter<double>("command_stale_timeout_s", 0.5);
 		const auto link_lengths_param = this->declare_parameter<std::vector<double>>(
@@ -117,6 +121,26 @@ public:
 			joint_max_velocity_.resize(dof);
 		}
 
+		if (joint_velocity_invert_.size() < dof)
+		{
+			RCLCPP_WARN(this->get_logger(), "joint_velocity_invert has fewer than %zu entries; padding with false", dof);
+			joint_velocity_invert_.resize(dof, false);
+		}
+		else if (joint_velocity_invert_.size() > dof)
+		{
+			joint_velocity_invert_.resize(dof);
+		}
+
+		if (world_max_velocity_.size() < 6U)
+		{
+			RCLCPP_WARN(this->get_logger(), "world_max_velocity has fewer than 6 entries; padding with +inf");
+			world_max_velocity_.resize(6U, std::numeric_limits<double>::infinity());
+		}
+		else if (world_max_velocity_.size() > 6U)
+		{
+			world_max_velocity_.resize(6U);
+		}
+
 		for (size_t i = 0; i < dof; ++i)
 		{
 			if (joint_min_limits_[i] > joint_max_limits_[i])
@@ -131,6 +155,14 @@ public:
 			const auto idx = static_cast<Eigen::Index>(i);
 			desired_joint_position_(idx) = std::clamp(
 				desired_joint_position_(idx), joint_min_limits_[i], joint_max_limits_[i]);
+		}
+
+		for (size_t i = 0; i < 6U; ++i)
+		{
+			if (world_max_velocity_[i] < 0.0)
+			{
+				world_max_velocity_[i] = std::abs(world_max_velocity_[i]);
+			}
 		}
 
 		last_velocity_time_ = steady_clock_.now();
@@ -179,10 +211,20 @@ public:
 			(void)kinematics_.setEndEffectorMode("roll_tool");
 			end_effector_config_ = "roll_tool";
 		}
+		has_roll_joint_ = (end_effector_config_ != "scoop");
 
-		// Initialize published endpoint with the best available estimate.
-		endpoint_position = kinematics_.forwardPosition(joint_position);
-		desired_world_position_ = endpoint_position;
+			// Initialize published endpoint with the best available estimate.
+			endpoint_position = kinematics_.forwardPosition(joint_position);
+			desired_world_position_ = endpoint_position;
+			{
+				const Eigen::VectorXd q_zero = Eigen::VectorXd::Zero(dof);
+				const Eigen::Isometry3d tf_zero = kinematics_.forwardTransform(q_zero);
+				const Eigen::Vector3d p_zero = tf_zero.translation();
+				RCLCPP_INFO(
+					this->get_logger(),
+					"FK sanity q=[0..0] -> position [%.5f, %.5f, %.5f] m",
+					p_zero.x(), p_zero.y(), p_zero.z());
+			}
 
 		// Encoder/state feedback subscription.
 		joint_state_sub_ = this->create_subscription<sensor_msgs::msg::JointState>(
@@ -211,8 +253,9 @@ public:
 		// Startup log for operator visibility.
 		RCLCPP_INFO(
 			this->get_logger(),
-			"Kanga Arm Controller Node started (end_effector_config=%s)",
-			end_effector_config_.c_str());
+			"Kanga Arm Controller Node started (end_effector_config=%s, has_roll_joint=%s)",
+			end_effector_config_.c_str(),
+			has_roll_joint_ ? "true" : "false");
 	}
 
 private:
@@ -343,14 +386,52 @@ private:
 		desired_world_position_ += reference_world_velocity.head<3>() * dt;
 
 		const Eigen::MatrixXd jacobian = kinematics_.computeJacobian(joint_position);
-		const Eigen::MatrixXd jacobian_pinv = pseudoInverse(jacobian, 1e-4);
-		const Eigen::VectorXd joint_velocity_cmd = jacobian_pinv * reference_world_velocity;
+		Eigen::VectorXd joint_velocity_cmd = Eigen::VectorXd::Zero(static_cast<Eigen::Index>(dof));
+
+		// Solve only [x, y, z, pitch] against joints j1..j4.
+		// Roll is a direct command on j5 and is intentionally excluded from Jacobian IK.
+		const size_t chain_dof = std::min<size_t>(4, dof);
+		if (chain_dof > 0 && jacobian.cols() >= static_cast<Eigen::Index>(chain_dof))
+		{
+			Eigen::MatrixXd task_jacobian(4, static_cast<Eigen::Index>(chain_dof));
+			task_jacobian.block(0, 0, 3, static_cast<Eigen::Index>(chain_dof)) =
+				jacobian.block(0, 0, 3, static_cast<Eigen::Index>(chain_dof));
+			// Pitch is angular y in the command convention.
+			task_jacobian.block(3, 0, 1, static_cast<Eigen::Index>(chain_dof)) =
+				jacobian.block(4, 0, 1, static_cast<Eigen::Index>(chain_dof));
+
+			Eigen::VectorXd task_velocity(4);
+			task_velocity(0) = reference_world_velocity(0); // x
+			task_velocity(1) = reference_world_velocity(1); // y
+			task_velocity(2) = reference_world_velocity(2); // z
+			task_velocity(3) = reference_world_velocity(4); // pitch (angular y)
+
+			const Eigen::MatrixXd task_jacobian_pinv = pseudoInverse(task_jacobian, 1e-4);
+			const Eigen::VectorXd chain_velocity_cmd = task_jacobian_pinv * task_velocity;
+			for (size_t i = 0; i < chain_dof; ++i)
+			{
+				joint_velocity_cmd(static_cast<Eigen::Index>(i)) =
+					(chain_velocity_cmd.size() > static_cast<Eigen::Index>(i))
+						? chain_velocity_cmd(static_cast<Eigen::Index>(i))
+						: 0.0;
+			}
+		}
+
+		// Direct roll command -> j5.
+		if (has_roll_joint_ && dof > 4)
+		{
+			joint_velocity_cmd(4) = reference_world_velocity(3); // roll (angular x)
+		}
 
 		for (size_t i = 0; i < dof; ++i)
 		{
 			const auto idx = static_cast<Eigen::Index>(i);
 			double cmd_vel = (joint_velocity_cmd.size() > idx) ? joint_velocity_cmd(idx) : 0.0;
 			cmd_vel = std::clamp(cmd_vel, -joint_max_velocity_[i], joint_max_velocity_[i]);
+			if (joint_velocity_invert_[i])
+			{
+				cmd_vel = -cmd_vel;
+			}
 
 			desired_joint_position_(idx) += cmd_vel * dt;
 			desired_joint_position_(idx) = std::clamp(
@@ -414,13 +495,34 @@ private:
 	 */
 	void worldVelocityCallback(const geometry_msgs::msg::Twist::SharedPtr msg)
 	{
+		const auto clamp_world = [this](size_t idx, double value) -> double
+		{
+			const double max_vel = world_max_velocity_[idx];
+			return std::clamp(value, -max_vel, max_vel);
+		};
+
 		std::lock_guard<std::mutex> lock(command_mutex_);
-		reference_world_velocity_(0) = msg->linear.x;
-		reference_world_velocity_(1) = msg->linear.y;
-		reference_world_velocity_(2) = msg->linear.z;
-		reference_world_velocity_(3) = msg->angular.x;
-		reference_world_velocity_(4) = msg->angular.y;
-		reference_world_velocity_(5) = msg->angular.z;
+		reference_world_velocity_(0) = clamp_world(0, msg->linear.x);
+		reference_world_velocity_(1) = clamp_world(1, msg->linear.y);
+		reference_world_velocity_(2) = clamp_world(2, msg->linear.z);
+		if (has_roll_joint_)
+		{
+			reference_world_velocity_(3) = clamp_world(3, msg->angular.x);
+		}
+		else
+		{
+			if (std::abs(msg->angular.x) > 1e-6)
+			{
+				RCLCPP_WARN_THROTTLE(
+					this->get_logger(),
+					*this->get_clock(),
+					1000,
+					"Ignoring roll command (angular.x) because end_effector_config=scoop.");
+			}
+			reference_world_velocity_(3) = 0.0;
+		}
+		reference_world_velocity_(4) = clamp_world(4, msg->angular.y);
+		reference_world_velocity_(5) = clamp_world(5, msg->angular.z);
 		last_velocity_time_ = steady_clock_.now();
 	}
 
@@ -455,6 +557,7 @@ private:
 	Eigen::VectorXd link_lengths; // Link lengths [m], size equals configured chain length.
 	kanga_arm_controller::ArmKinematics kinematics_{};
 	std::string end_effector_config_{"roll_tool"};
+	bool has_roll_joint_{true};
 
 	// Runtime state (measured/estimated).
 	Eigen::VectorXd joint_position;			 // Joint positions [rad], size `dof`.
@@ -472,7 +575,9 @@ private:
 	// Control loop configuration.
 	std::vector<double> joint_min_limits_;
 	std::vector<double> joint_max_limits_;
+	std::vector<bool> joint_velocity_invert_;
 	std::vector<double> joint_max_velocity_;
+	std::vector<double> world_max_velocity_;
 	bool hold_position_on_stale_{true};
 	double command_stale_timeout_s_{0.5};
 	float control_time_step_ms;
