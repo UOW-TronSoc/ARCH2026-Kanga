@@ -9,7 +9,7 @@ def generate_launch_description() -> LaunchDescription:
         name='joy_node',
         output='screen',
         parameters=[{
-            'deadzone': 0.15,
+            'deadzone': 0.3,
         }],
     )
 

@@ -22,7 +22,15 @@ def generate_launch_description() -> LaunchDescription:
         output="screen",
     )
 
+    arm_feedback_bridge_node = Node(
+        package="kanga_arm_drive",
+        executable="arm_feedback_bridge",
+        name="arm_feedback_bridge",
+        output="screen",
+    )
+
     return LaunchDescription([
         odrive_multi_launch,
         arm_mapper_node,
+        arm_feedback_bridge_node,
     ])

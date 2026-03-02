@@ -58,6 +58,9 @@ private:
     EpollEvent sub_evt_;
     std::mutex ctrl_msg_mutex_;
     ControlMessage ctrl_msg_ = ControlMessage();
+    bool controller_mode_sent_ = false;
+    uint32_t last_control_mode_ = 0;
+    uint32_t last_input_mode_ = 0;
     rclcpp::Subscription<ControlMessage>::SharedPtr subscriber_;
 
     EpollEvent srv_evt_;

@@ -40,7 +40,7 @@ ODriveCanNode::ODriveCanNode(const std::string& node_name) : rclcpp::Node(node_n
     rclcpp::QoS odrv_stat_qos(rclcpp::KeepAll{});
     odrv_publisher_ = rclcpp::Node::create_publisher<ODriveStatus>("odrive_status", odrv_stat_qos);
 
-    rclcpp::QoS ctrl_msg_qos(rclcpp::KeepAll{});
+    rclcpp::QoS ctrl_msg_qos(rclcpp::KeepLast(1));
     subscriber_ = rclcpp::Node::create_subscription<ControlMessage>("control_message", ctrl_msg_qos, std::bind(&ODriveCanNode::subscriber_callback, this, _1));
 
     rclcpp::QoS srv_qos(rclcpp::KeepAll{});
@@ -278,20 +278,31 @@ void ODriveCanNode::request_clear_errors_callback() {
 }
 
 void ODriveCanNode::ctrl_msg_callback() {
-    
-    uint32_t control_mode;
-    struct can_frame frame;
-    frame.can_id = node_id_ << 5 | kSetControllerMode;
+    ControlMessage ctrl_msg;
     {
         std::lock_guard<std::mutex> guard(ctrl_msg_mutex_);
-        write_le<uint32_t>(ctrl_msg_.control_mode, frame.data);
-        write_le<uint32_t>(ctrl_msg_.input_mode,   frame.data + 4);
-        control_mode = ctrl_msg_.control_mode;
+        ctrl_msg = ctrl_msg_;
     }
-    frame.can_dlc = 8;
-    can_intf_.send_can_frame(frame);
+
+    const uint32_t control_mode = ctrl_msg.control_mode;
+    const uint32_t input_mode = ctrl_msg.input_mode;
+
+    if (!controller_mode_sent_ ||
+        control_mode != last_control_mode_ ||
+        input_mode != last_input_mode_) {
+        struct can_frame mode_frame = {};
+        mode_frame.can_id = node_id_ << 5 | kSetControllerMode;
+        write_le<uint32_t>(control_mode, mode_frame.data);
+        write_le<uint32_t>(input_mode, mode_frame.data + 4);
+        mode_frame.can_dlc = 8;
+        can_intf_.send_can_frame(mode_frame);
+
+        controller_mode_sent_ = true;
+        last_control_mode_ = control_mode;
+        last_input_mode_ = input_mode;
+    }
     
-    frame = can_frame{};
+    struct can_frame frame = {};
     switch (control_mode) {
         case ControlMode::kVoltageControl: {
             RCLCPP_ERROR(rclcpp::Node::get_logger(), "Voltage Control Mode (0) is not currently supported");
@@ -300,27 +311,24 @@ void ODriveCanNode::ctrl_msg_callback() {
         case ControlMode::kTorqueControl: {
             RCLCPP_DEBUG(rclcpp::Node::get_logger(), "input_torque");
             frame.can_id = node_id_ << 5 | kSetInputTorque;
-            std::lock_guard<std::mutex> guard(ctrl_msg_mutex_);
-            write_le<float>(ctrl_msg_.input_torque, frame.data);
+            write_le<float>(ctrl_msg.input_torque, frame.data);
             frame.can_dlc = 4;
             break;
         }
         case ControlMode::kVelocityControl: {
             RCLCPP_DEBUG(rclcpp::Node::get_logger(), "input_vel");
             frame.can_id = node_id_ << 5 | kSetInputVel;
-            std::lock_guard<std::mutex> guard(ctrl_msg_mutex_);
-            write_le<float>(ctrl_msg_.input_vel,       frame.data);
-            write_le<float>(ctrl_msg_.input_torque, frame.data + 4);
+            write_le<float>(ctrl_msg.input_vel, frame.data);
+            write_le<float>(ctrl_msg.input_torque, frame.data + 4);
             frame.can_dlc = 8;
             break;
         }
         case ControlMode::kPositionControl: {
             RCLCPP_DEBUG(rclcpp::Node::get_logger(), "input_pos");
             frame.can_id = node_id_ << 5 | kSetInputPos;
-            std::lock_guard<std::mutex> guard(ctrl_msg_mutex_);
-            write_le<float>(ctrl_msg_.input_pos,  frame.data);
-            write_le<int8_t>(((int8_t)((ctrl_msg_.input_vel) * 1000)),    frame.data + 4);
-            write_le<int8_t>(((int8_t)((ctrl_msg_.input_torque) * 1000)), frame.data + 6);
+            write_le<float>(ctrl_msg.input_pos, frame.data);
+            write_le<int8_t>(static_cast<int8_t>(ctrl_msg.input_vel * 1000.0F), frame.data + 4);
+            write_le<int8_t>(static_cast<int8_t>(ctrl_msg.input_torque * 1000.0F), frame.data + 6);
             frame.can_dlc = 8;
             break;
         }    

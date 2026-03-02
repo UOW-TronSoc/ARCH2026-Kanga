@@ -19,8 +19,17 @@ ament_target_dependencies(
   sensor_msgs
   kanga_interfaces)
 
+add_executable(arm_feedback_bridge src/arm_feedback_bridge.cpp)
+ament_target_dependencies(
+  arm_feedback_bridge
+  ament_index_cpp
+  rclcpp
+  sensor_msgs
+  kanga_interfaces)
+
 install(TARGETS
   arm_command_mapper
+  arm_feedback_bridge
   DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY
