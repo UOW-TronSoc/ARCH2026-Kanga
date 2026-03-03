@@ -33,6 +33,7 @@ ODriveCanNode::ODriveCanNode(const std::string& node_name) : rclcpp::Node(node_n
     rclcpp::Node::declare_parameter<std::string>("interface", "can0");
     rclcpp::Node::declare_parameter<uint16_t>("node_id", 0);
     rclcpp::Node::declare_parameter<bool>("axis_idle_on_shutdown", false);
+    rclcpp::Node::declare_parameter<bool>("control_message_in_radians_per_second", false);
 
     rclcpp::QoS ctrl_stat_qos(rclcpp::KeepAll{});
     ctrl_publisher_ = rclcpp::Node::create_publisher<ControllerStatus>("controller_status", ctrl_stat_qos);
@@ -68,6 +69,8 @@ bool ODriveCanNode::init(EpollEventLoop* event_loop) {
 
     node_id_ = rclcpp::Node::get_parameter("node_id").as_int();
     axis_idle_on_shutdown_ = rclcpp::Node::get_parameter("axis_idle_on_shutdown").as_bool();
+    control_message_in_radians_per_second_ =
+        rclcpp::Node::get_parameter("control_message_in_radians_per_second").as_bool();
     std::string interface = rclcpp::Node::get_parameter("interface").as_string();
 
     if (!can_intf_.init(interface, event_loop, std::bind(&ODriveCanNode::recv_callback, this, _1))) {
@@ -88,6 +91,10 @@ bool ODriveCanNode::init(EpollEventLoop* event_loop) {
     }
     RCLCPP_INFO(rclcpp::Node::get_logger(), "node_id: %d", node_id_);
     RCLCPP_INFO(rclcpp::Node::get_logger(), "interface: %s", interface.c_str());
+    RCLCPP_INFO(
+        rclcpp::Node::get_logger(),
+        "control_message_in_radians_per_second: %s",
+        control_message_in_radians_per_second_ ? "true" : "false");
     return true;
 }
 
@@ -318,7 +325,11 @@ void ODriveCanNode::ctrl_msg_callback() {
         case ControlMode::kVelocityControl: {
             RCLCPP_DEBUG(rclcpp::Node::get_logger(), "input_vel");
             frame.can_id = node_id_ << 5 | kSetInputVel;
-            write_le<float>(ctrl_msg.input_vel, frame.data);
+            constexpr float kTwoPi = 6.28318530717958647692F;
+            const float input_vel_turns_per_second = control_message_in_radians_per_second_
+                ? (ctrl_msg.input_vel / kTwoPi)
+                : ctrl_msg.input_vel;
+            write_le<float>(input_vel_turns_per_second, frame.data);
             write_le<float>(ctrl_msg.input_torque, frame.data + 4);
             frame.can_dlc = 8;
             break;
@@ -326,8 +337,15 @@ void ODriveCanNode::ctrl_msg_callback() {
         case ControlMode::kPositionControl: {
             RCLCPP_DEBUG(rclcpp::Node::get_logger(), "input_pos");
             frame.can_id = node_id_ << 5 | kSetInputPos;
-            write_le<float>(ctrl_msg.input_pos, frame.data);
-            write_le<int8_t>(static_cast<int8_t>(ctrl_msg.input_vel * 1000.0F), frame.data + 4);
+            constexpr float kTwoPi = 6.28318530717958647692F;
+            const float input_pos_turns = control_message_in_radians_per_second_
+                ? (ctrl_msg.input_pos / kTwoPi)
+                : ctrl_msg.input_pos;
+            const float input_vel_turns_per_second = control_message_in_radians_per_second_
+                ? (ctrl_msg.input_vel / kTwoPi)
+                : ctrl_msg.input_vel;
+            write_le<float>(input_pos_turns, frame.data);
+            write_le<int8_t>(static_cast<int8_t>(input_vel_turns_per_second * 1000.0F), frame.data + 4);
             write_le<int8_t>(static_cast<int8_t>(ctrl_msg.input_torque * 1000.0F), frame.data + 6);
             frame.can_dlc = 8;
             break;

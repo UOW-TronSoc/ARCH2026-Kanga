@@ -43,6 +43,7 @@ private:
     
     uint16_t node_id_;
     bool axis_idle_on_shutdown_;
+    bool control_message_in_radians_per_second_{false};
     SocketCanIntf can_intf_ = SocketCanIntf();
     
     short int ctrl_pub_flag_ = 0;
