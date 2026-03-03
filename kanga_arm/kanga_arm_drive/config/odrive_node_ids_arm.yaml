@@ -5,19 +5,21 @@ kanga_arm_drive:
         node_id: 1
         interface: can0
         invert: false
+        encoder_invert: true
         reduction: 50.0
       - namespace: arm_j2
         node_id: 2
         interface: can0
-        invert: false
+        invert: true
         reduction: 200.0
       - namespace: arm_j3
         node_id: 3
         interface: can0
-        invert: false
+        invert: true
+        encoder_invert: true
         reduction: 200.0
       - namespace: arm_j4
         node_id: 4
         interface: can0
-        invert: false
+        invert: true
         reduction: 28.0

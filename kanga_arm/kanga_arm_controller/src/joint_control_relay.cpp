@@ -27,12 +27,17 @@ public:
 
     // The relay tracks its own desired position state by integrating velocity commands.
     current_position_ = init_pos_;
+    feedback_position_ = init_pos_;
     latest_velocity_ = std::vector<double>(dof, 0.0);
     last_velocity_time_ = steady_clock_.now();
 
     joint_control_sub_ = this->create_subscription<sensor_msgs::msg::JointState>(
       "/kanga_arm/joint_control", 10,
       std::bind(&JointControlRelay::jointControlCallback, this, std::placeholders::_1));
+
+    joint_state_sub_ = this->create_subscription<sensor_msgs::msg::JointState>(
+      "joint_states", 10,
+      std::bind(&JointControlRelay::jointStateCallback, this, std::placeholders::_1));
 
     // Per-joint safety and command-shaping parameters.
     joint_min_limits_ = this->declare_parameter<std::vector<double>>(
@@ -120,12 +125,16 @@ private:
   // Stores latest commanded velocity for each joint.
   void jointControlCallback(const sensor_msgs::msg::JointState::SharedPtr msg)
   {
-    if (msg->velocity.size() < dof) {
-      RCLCPP_WARN(this->get_logger(), "Joint control message has fewer than %zu velocities; missing entries treated as zero", dof);
+    std::lock_guard<std::mutex> lock(command_mutex_);
+    const size_t controlled_dof = active_dof_;
+    if (msg->velocity.size() < controlled_dof) {
+      RCLCPP_WARN(
+        this->get_logger(),
+        "Joint control message has fewer than %zu velocities; missing entries treated as zero",
+        controlled_dof);
     }
 
-    std::lock_guard<std::mutex> lock(command_mutex_);
-    for (size_t i = 0; i < dof; ++i) {
+    for (size_t i = 0; i < controlled_dof; ++i) {
       double velocity = (msg->velocity.size() > i) ? msg->velocity[i] : 0.0;
       if (joint_velocity_invert_[i]) {
         velocity = -velocity;
@@ -133,7 +142,27 @@ private:
       velocity = std::clamp(velocity, -joint_max_velocity_[i], joint_max_velocity_[i]);
       latest_velocity_[i] = velocity;
     }
+    for (size_t i = controlled_dof; i < dof; ++i) {
+      latest_velocity_[i] = 0.0;
+    }
     last_velocity_time_ = steady_clock_.now();
+  }
+
+  // Updates measured joint feedback used for limit checks and command anchoring.
+  void jointStateCallback(const sensor_msgs::msg::JointState::SharedPtr msg)
+  {
+    if (!msg || msg->position.empty()) {
+      return;
+    }
+
+    const size_t reported_dof = std::min(dof, msg->position.size());
+    std::lock_guard<std::mutex> lock(command_mutex_);
+    active_dof_ = std::max<size_t>(1, reported_dof);
+    have_feedback_ = true;
+
+    for (size_t i = 0; i < reported_dof; ++i) {
+      feedback_position_[i] = msg->position[i];
+    }
   }
 
   // Periodic control loop: filter command, integrate desired position, clamp limits, publish.
@@ -142,10 +171,13 @@ private:
     const rclcpp::Time now = steady_clock_.now();
     const double dt = publish_period_seconds_;
 
-    std::vector<double> raw_velocity(dof, 0.0);
+    size_t controlled_dof = dof;
+    std::vector<double> raw_velocity;
     bool is_stale = true;
     {
       std::lock_guard<std::mutex> lock(command_mutex_);
+      controlled_dof = active_dof_;
+      raw_velocity.assign(controlled_dof, 0.0);
       const double stale_seconds = (now - last_velocity_time_).seconds();
       is_stale = stale_seconds > command_stale_timeout_s_;
       if (is_stale) {
@@ -159,18 +191,18 @@ private:
           hold_position_on_stale_ ? "true" : "false");
       }
       if (!is_stale) {
-        raw_velocity = latest_velocity_;
+        raw_velocity.assign(latest_velocity_.begin(), latest_velocity_.begin() + controlled_dof);
       }
     }
 
     if (is_stale && hold_position_on_stale_) {
       // Immediate hold: stop target motion when upstream commands disappear.
-      std::fill(filtered_velocity_.begin(), filtered_velocity_.end(), 0.0);
+      std::fill(filtered_velocity_.begin(), filtered_velocity_.begin() + controlled_dof, 0.0);
     }
 
-    std::vector<double> velocity(dof, 0.0);
+    std::vector<double> velocity(controlled_dof, 0.0);
     const double max_step = std::max(0.0, max_velocity_slew_rate_) * dt;
-    for (size_t i = 0; i < dof; ++i) {
+    for (size_t i = 0; i < controlled_dof; ++i) {
       if (is_stale && hold_position_on_stale_) {
         velocity[i] = 0.0;
         continue;
@@ -189,14 +221,15 @@ private:
       filtered_velocity_[i] = std::clamp(
         filtered_velocity_[i], -joint_max_velocity_[i], joint_max_velocity_[i]);
       velocity[i] = filtered_velocity_[i];
+      const double measured_position = have_feedback_ ? feedback_position_[i] : current_position_[i];
       current_position_[i] += velocity[i] * dt;
 
       // Keep desired position inside configured hard limits.
       current_position_[i] = std::clamp(current_position_[i], joint_min_limits_[i], joint_max_limits_[i]);
 
-      // Anti-windup style behavior: stop integrating farther into a saturated limit.
-      if ((current_position_[i] <= joint_min_limits_[i] && velocity[i] < 0.0) ||
-          (current_position_[i] >= joint_max_limits_[i] && velocity[i] > 0.0)) {
+      // Anti-windup uses measured feedback when available to stop driving into hard limits.
+      if ((measured_position <= joint_min_limits_[i] && velocity[i] < 0.0) ||
+          (measured_position >= joint_max_limits_[i] && velocity[i] > 0.0)) {
         velocity[i] = 0.0;
         filtered_velocity_[i] = 0.0;
       }
@@ -204,11 +237,11 @@ private:
 
     sensor_msgs::msg::JointState out_msg;
     out_msg.header.stamp = this->get_clock()->now();
-    out_msg.position.resize(dof);
-    out_msg.velocity.resize(dof);
-    out_msg.effort.resize(dof, 0.0);
+    out_msg.position.resize(controlled_dof);
+    out_msg.velocity.resize(controlled_dof);
+    out_msg.effort.resize(controlled_dof, 0.0);
 
-    for (size_t i = 0; i < dof; ++i) {
+    for (size_t i = 0; i < controlled_dof; ++i) {
       out_msg.position[i] = current_position_[i];
       out_msg.velocity[i] = velocity[i];
     }
@@ -217,12 +250,14 @@ private:
   }
 
   rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr joint_control_sub_;
+  rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr joint_state_sub_;
   rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr desired_control_pub_;
   rclcpp::TimerBase::SharedPtr timer_;
 
   const size_t dof = 5;
   std::vector<double> init_pos_;
   std::vector<double> current_position_;
+  std::vector<double> feedback_position_;
   std::vector<double> latest_velocity_;
   std::vector<double> filtered_velocity_{std::vector<double>(dof, 0.0)};
   std::vector<double> joint_min_limits_;
@@ -237,6 +272,8 @@ private:
   double max_velocity_slew_rate_{8.0};
   bool hold_position_on_stale_{true};
   double command_stale_timeout_s_{0.5};
+  size_t active_dof_{dof};
+  bool have_feedback_{false};
 };
 
 int main(int argc, char **argv)

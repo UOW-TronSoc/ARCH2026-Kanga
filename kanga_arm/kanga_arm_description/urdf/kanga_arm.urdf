@@ -190,7 +190,7 @@
     <parent link="link3"/>
     <child link="link4"/>
     <axis xyz="0 0 1"/>
-    <limit effort="10" lower="-3.66519" upper="0" velocity="10"/>
+    <limit effort="10" lower="-3.66519" upper="0.785398163" velocity="10"/>
   </joint>
   <joint name="arm_j3" type="revolute">
     <origin rpy="3.14159 0 0" xyz="0.449997 1.12725e-06 -0.0395"/>

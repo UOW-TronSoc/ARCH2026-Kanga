@@ -521,30 +521,46 @@ private:
 		 */
 		void effortCommandCallback(const sensor_msgs::msg::JointState::SharedPtr msg)
 		{
-			// Make sure control commands match the robot dof
-			if (msg->position.size() != robot->getDOF())
+			const size_t expected_dof = static_cast<size_t>(robot->getDOF());
+			if (msg->position.empty())
 			{
-				RCLCPP_WARN(this->get_logger(), "Received effort command of wrong size: %zu (expected %zu)", msg->position.size(), robot->getDOF());
+				RCLCPP_WARN_THROTTLE(
+					this->get_logger(), *this->get_clock(), 1000,
+					"Received empty effort command; expected up to %zu joints",
+					expected_dof);
 				return;
 			}
 
+			if (msg->position.size() < expected_dof)
+			{
+				RCLCPP_WARN_THROTTLE(
+					this->get_logger(), *this->get_clock(), 1000,
+					"Received partial effort command: %zu of %zu joints. Unspecified joints hold previous targets.",
+					msg->position.size(),
+					expected_dof);
+			}
+
+			const size_t command_dof = std::min(msg->position.size(), expected_dof);
 			std::lock_guard<std::mutex> lock(target_mutex_);
 
 			// Save desired positions
-			for (size_t i = 0; i < msg->position.size(); ++i)
+			for (size_t i = 0; i < command_dof; ++i)
 			{
 				q_ref[i] = msg->position[i];
 			}
 
 			// Save desired velocities if provided; otherwise zero
-			if (msg->velocity.size() == msg->position.size())
+			if (msg->velocity.size() >= command_dof)
 			{
-				for (size_t i = 0; i < msg->velocity.size(); ++i)
+				for (size_t i = 0; i < command_dof; ++i)
 					qd_ref[i] = msg->velocity[i];
 			}
 			else
 			{
-				qd_ref.setZero();
+				for (size_t i = 0; i < command_dof; ++i)
+				{
+					qd_ref[i] = 0.0;
+				}
 			}
 		}
 

@@ -20,6 +20,8 @@ struct OdriveConfig
 {
   std::string ns;
   bool invert{false};
+  bool encoder_invert{false};
+  bool encoder_invert_explicit{false};
   double reduction{1.0};
 };
 
@@ -97,6 +99,10 @@ std::vector<OdriveConfig> load_configs_from_yaml(const rclcpp::Logger & logger)
 
   auto push_current = [&]() {
       if (!current.ns.empty()) {
+        if (!current.encoder_invert_explicit) {
+          // Backward compatibility: when encoder_invert is not set, follow invert.
+          current.encoder_invert = current.invert;
+        }
         if (current.reduction <= 0.0) {
           RCLCPP_WARN(
             logger,
@@ -163,6 +169,12 @@ std::vector<OdriveConfig> load_configs_from_yaml(const rclcpp::Logger & logger)
       continue;
     }
 
+    if (starts_with(trimmed, "encoder_invert:")) {
+      current.encoder_invert = parse_bool(trim(trimmed.substr(std::string("encoder_invert:").size())));
+      current.encoder_invert_explicit = true;
+      continue;
+    }
+
     if (starts_with(trimmed, "reduction:")) {
       const auto reduction_text = trim(trimmed.substr(std::string("reduction:").size()));
       double parsed = 1.0;
@@ -210,7 +222,7 @@ public:
       AxisData axis;
       axis.name = cfg.ns;
       axis.reduction = static_cast<float>(std::max(1.0e-6, cfg.reduction));
-      axis.sign = cfg.invert ? -1.0F : 1.0F;
+      axis.sign = cfg.encoder_invert ? -1.0F : 1.0F;
       axes_.push_back(axis);
 
       const auto topic = "/" + cfg.ns + "/controller_status";
@@ -254,9 +266,10 @@ private:
 
     std::lock_guard<std::mutex> lock(mutex_);
     auto & axis = axes_[index];
+    constexpr float kTwoPi = 6.28318530717958647692F;
     const float inv_reduction = 1.0F / axis.reduction;
-    axis.position = axis.sign * static_cast<float>(msg->pos_estimate) * inv_reduction;
-    axis.velocity = axis.sign * static_cast<float>(msg->vel_estimate) * inv_reduction;
+    axis.position = axis.sign * static_cast<float>(msg->pos_estimate) * inv_reduction * kTwoPi;
+    axis.velocity = axis.sign * static_cast<float>(msg->vel_estimate) * inv_reduction * kTwoPi;
     axis.effort = axis.sign * static_cast<float>(msg->torque_estimate);
     axis.seen = true;
   }

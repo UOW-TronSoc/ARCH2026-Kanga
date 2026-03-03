@@ -14,7 +14,6 @@ def generate_launch_description() -> LaunchDescription:
     use_sim = LaunchConfiguration("use_sim")
     enable_drive = LaunchConfiguration("enable_drive")
 
-    # Package paths
     robot_description_path = get_package_share_directory("kanga_arm_description")
     operation_path = get_package_share_directory("kanga_arm_bringup")
     simulation_path = get_package_share_directory("kanga_arm_simulation")
@@ -39,11 +38,11 @@ def generate_launch_description() -> LaunchDescription:
         "simulation.yaml",
     )
 
-    # Joint-space controller
+    # World-space arm controller (publishes joint_desired_control)
     control_node = Node(
         package="kanga_arm_controller",
-        executable="joint_control_relay_node",
-        name="kanga_arm_joint_control_relay",
+        executable="control_node",
+        name="kanga_arm_controller",
         output="screen",
         parameters=[
             kanga_arm_config,
@@ -52,10 +51,10 @@ def generate_launch_description() -> LaunchDescription:
         ],
     )
 
-    # Joystick -> joint command bridge (always available)
-    joy_joint_control_launch = IncludeLaunchDescription(
+    # Joystick -> world command bridge (always available)
+    joy_world_control_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(joy_control_path, "launch", "joy_arm_joint_control.launch.py")
+            os.path.join(joy_control_path, "launch", "joy_arm_world_control.launch.py")
         )
     )
 
@@ -88,7 +87,10 @@ def generate_launch_description() -> LaunchDescription:
         output="screen",
         condition=IfCondition(
             PythonExpression(
-                ["('", use_sim, "'.lower() in ['true','1']) and ('", enable_drive, "'.lower() in ['true','1'])"]
+                [
+                    "('", use_sim, "'.lower() in ['true','1']) and "
+                    "('", enable_drive, "'.lower() in ['true','1'])"
+                ]
             )
         ),
         remappings=[
@@ -103,7 +105,7 @@ def generate_launch_description() -> LaunchDescription:
         ],
     )
 
-    # Hardware arm stack
+    # Hardware stack (ODrive nodes + mapper + feedback bridge)
     arm_drive_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(arm_drive_path, "launch", "arm_drive_with_mapper.launch.py")
@@ -123,7 +125,7 @@ def generate_launch_description() -> LaunchDescription:
             description="If true: run hardware arm drive stack.",
         ),
         control_node,
-        joy_joint_control_launch,
+        joy_world_control_launch,
         raisim_sim_only,
         raisim_sim_with_drive,
         arm_drive_launch,

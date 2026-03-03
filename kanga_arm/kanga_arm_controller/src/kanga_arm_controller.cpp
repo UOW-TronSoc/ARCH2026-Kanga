@@ -141,6 +141,7 @@ public:
 			world_max_velocity_.resize(6U);
 		}
 
+
 		for (size_t i = 0; i < dof; ++i)
 		{
 			if (joint_min_limits_[i] > joint_max_limits_[i])
@@ -240,7 +241,8 @@ public:
 		desired_control_pub_ = this->create_publisher<sensor_msgs::msg::JointState>("joint_desired_control", 10);
 
 		// Diagnostic/telemetry publisher for Cartesian end-effector pose.
-		endpoint_publisher_ = this->create_publisher<geometry_msgs::msg::Pose>("endpoint", 10);
+		endpoint_publisher_ = this->create_publisher<geometry_msgs::msg::Pose>("endpoint/pose", 10);
+		endpoint_twist_publisher_ = this->create_publisher<geometry_msgs::msg::Twist>("endpoint/twist", 10);
 
 		// Main control loop timer (default 1 kHz from 1.0 ms period).
 		timer_ = rclcpp::create_timer(
@@ -386,6 +388,12 @@ private:
 		desired_world_position_ += reference_world_velocity.head<3>() * dt;
 
 		const Eigen::MatrixXd jacobian = kinematics_.computeJacobian(joint_position);
+		Eigen::VectorXd measured_cartesian_twist = Eigen::VectorXd::Zero(6);
+		if (jacobian.cols() == joint_velocity.size() && jacobian.rows() >= 6)
+		{
+			measured_cartesian_twist = jacobian * joint_velocity;
+		}
+
 		Eigen::VectorXd joint_velocity_cmd = Eigen::VectorXd::Zero(static_cast<Eigen::Index>(dof));
 
 		// Solve only [x, y, z, pitch] against joints j1..j4.
@@ -464,6 +472,19 @@ private:
 		endpoint_msg.orientation.z = q.z();
 		endpoint_msg.orientation.w = q.w();
 		endpoint_publisher_->publish(endpoint_msg);
+
+		// Publish measured Cartesian endpoint twist from the measured joint velocity.
+		geometry_msgs::msg::Twist endpoint_twist_msg;
+		if (measured_cartesian_twist.size() >= 6)
+		{
+			endpoint_twist_msg.linear.x = measured_cartesian_twist(0);
+			endpoint_twist_msg.linear.y = measured_cartesian_twist(1);
+			endpoint_twist_msg.linear.z = measured_cartesian_twist(2);
+			endpoint_twist_msg.angular.x = measured_cartesian_twist(3);
+			endpoint_twist_msg.angular.y = measured_cartesian_twist(4);
+			endpoint_twist_msg.angular.z = measured_cartesian_twist(5);
+		}
+		endpoint_twist_publisher_->publish(endpoint_twist_msg);
 	}
 
 	/**
@@ -475,13 +496,21 @@ private:
 	 */
 	void jointStateCallback(const sensor_msgs::msg::JointState::SharedPtr msg)
 	{
-		if (msg->position.size() < dof)
+		const size_t required_feedback_dof = std::min<size_t>(4, dof);
+		if (msg->position.size() < required_feedback_dof)
 		{
-			RCLCPP_ERROR(this->get_logger(), "Received joint state message with incorrect size");
+			RCLCPP_ERROR_THROTTLE(
+				this->get_logger(),
+				*this->get_clock(),
+				1000,
+				"Received joint state message with incorrect size: got %zu, need at least %zu",
+				msg->position.size(),
+				required_feedback_dof);
 			return;
 		}
 
-		for (size_t i = 0; i < dof; ++i)
+		const size_t reported_dof = std::min(dof, msg->position.size());
+		for (size_t i = 0; i < reported_dof; ++i)
 		{
 			joint_position(static_cast<int>(i)) = msg->position[i];
 			joint_velocity(static_cast<int>(i)) = (msg->velocity.size() > i) ? msg->velocity[i] : 0.0;
@@ -550,6 +579,7 @@ private:
 	rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr world_velocity_sub_;
 	rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr desired_control_pub_;
 	rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr endpoint_publisher_;
+	rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr endpoint_twist_publisher_;
 	rclcpp::TimerBase::SharedPtr timer_;
 
 	// Parameters/model constants.

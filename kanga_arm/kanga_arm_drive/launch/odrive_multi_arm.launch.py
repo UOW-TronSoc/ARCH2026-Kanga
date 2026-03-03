@@ -45,6 +45,7 @@ def generate_launch_description() -> LaunchDescription:
                 parameters=[
                     {"node_id": int(node_id)},
                     {"interface": interface},
+                    {"control_message_in_radians_per_second": True},
                 ],
                 output="screen",
             )

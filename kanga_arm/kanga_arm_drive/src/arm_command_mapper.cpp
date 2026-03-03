@@ -579,7 +579,7 @@ private:
       ctrl.input_vel = sign * motor_vel;
       RCLCPP_INFO_THROTTLE(
         this->get_logger(), *this->get_clock(), 500,
-        "Publishing ODrive command axis=%s joint=%s joint_vel=%.5f turns/s motor_input_vel=%.5f turns/s (raw_joint_vel=%.5f, reduction=%.3f, joint_vel_limit=%.5f)",
+        "Publishing ODrive command axis=%s joint=%s joint_vel=%.5f rad/s motor_input_vel=%.5f rad/s (raw_joint_vel=%.5f rad/s, reduction=%.3f, joint_vel_limit=%.5f rad/s)",
         axis_names_[i].c_str(),
         controlled_joint_names_[i].c_str(),
         limited_joint_vel,
