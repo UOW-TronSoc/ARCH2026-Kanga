@@ -7,6 +7,7 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(ament_index_cpp REQUIRED)
+find_package(can_msgs REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(kanga_interfaces REQUIRED)
@@ -27,9 +28,17 @@ ament_target_dependencies(
   sensor_msgs
   kanga_interfaces)
 
+add_executable(arm_end_effector_mapper src/arm_end_effector_mapper.cpp)
+ament_target_dependencies(
+  arm_end_effector_mapper
+  can_msgs
+  rclcpp
+  sensor_msgs)
+
 install(TARGETS
   arm_command_mapper
   arm_feedback_bridge
+  arm_end_effector_mapper
   DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY

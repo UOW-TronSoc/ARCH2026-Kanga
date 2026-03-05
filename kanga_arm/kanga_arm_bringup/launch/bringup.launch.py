@@ -13,6 +13,7 @@ from ament_index_python.packages import get_package_share_directory
 def generate_launch_description() -> LaunchDescription:
     use_sim = LaunchConfiguration("use_sim")
     enable_drive = LaunchConfiguration("enable_drive")
+    tool_mode = LaunchConfiguration("tool_mode")
 
     # Package paths
     robot_description_path = get_package_share_directory("kanga_arm_description")
@@ -108,6 +109,9 @@ def generate_launch_description() -> LaunchDescription:
         PythonLaunchDescriptionSource(
             os.path.join(arm_drive_path, "launch", "arm_drive_with_mapper.launch.py")
         ),
+        launch_arguments={
+            "tool_mode": tool_mode,
+        }.items(),
         condition=IfCondition(enable_drive),
     )
 
@@ -121,6 +125,11 @@ def generate_launch_description() -> LaunchDescription:
             "enable_drive",
             default_value="true",
             description="If true: run hardware arm drive stack.",
+        ),
+        DeclareLaunchArgument(
+            "tool_mode",
+            default_value="end_effector",
+            description="Tool mode: end_effector enables end_effector mapper, gripper disables it.",
         ),
         control_node,
         joy_joint_control_launch,
