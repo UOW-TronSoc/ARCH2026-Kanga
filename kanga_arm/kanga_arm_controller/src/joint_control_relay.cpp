@@ -221,15 +221,18 @@ private:
       filtered_velocity_[i] = std::clamp(
         filtered_velocity_[i], -joint_max_velocity_[i], joint_max_velocity_[i]);
       velocity[i] = filtered_velocity_[i];
-      const double measured_position = have_feedback_ ? feedback_position_[i] : current_position_[i];
+      const double measured_position_limit_frame = have_feedback_
+        ? feedback_position_[i]
+        : (joint_velocity_invert_[i] ? -current_position_[i] : current_position_[i]);
       current_position_[i] += velocity[i] * dt;
 
       // Keep desired position inside configured hard limits.
       current_position_[i] = std::clamp(current_position_[i], joint_min_limits_[i], joint_max_limits_[i]);
 
-      // Anti-windup uses measured feedback when available to stop driving into hard limits.
-      if ((measured_position <= joint_min_limits_[i] && velocity[i] < 0.0) ||
-          (measured_position >= joint_max_limits_[i] && velocity[i] > 0.0)) {
+      // Evaluate anti-windup in joint-limit frame (before velocity sign inversion).
+      const double velocity_limit_frame = joint_velocity_invert_[i] ? -velocity[i] : velocity[i];
+      if ((measured_position_limit_frame <= joint_min_limits_[i] && velocity_limit_frame < 0.0) ||
+          (measured_position_limit_frame >= joint_max_limits_[i] && velocity_limit_frame > 0.0)) {
         velocity[i] = 0.0;
         filtered_velocity_[i] = 0.0;
       }
