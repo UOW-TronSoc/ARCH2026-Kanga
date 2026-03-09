@@ -17,7 +17,7 @@ public:
   {
     joint_command_topic_ = this->declare_parameter<std::string>(
       "joint_command_topic", "/kanga_arm/joint_control");
-    can_interface_ = this->declare_parameter<std::string>("can_interface", "can0");
+    can_interface_ = this->declare_parameter<std::string>("can_interface", "can2");
     j5_scale_to_255_ = this->declare_parameter<double>("j5_scale_to_255", 1.0);
     j6_min_angle_ = this->declare_parameter<double>("j6_min_angle", 0.0);
     j6_max_angle_ = this->declare_parameter<double>("j6_max_angle", 180.0);

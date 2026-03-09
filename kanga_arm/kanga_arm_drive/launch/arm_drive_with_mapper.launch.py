@@ -51,7 +51,7 @@ def generate_launch_description() -> LaunchDescription:
     return LaunchDescription([
         DeclareLaunchArgument(
             "can_interface",
-            default_value="can0",
+            default_value="can2",
             description="CAN interface for transmit topic CAN/<interface>/transmit",
         ),
         DeclareLaunchArgument(

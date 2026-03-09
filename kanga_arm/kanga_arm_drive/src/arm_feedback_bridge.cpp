@@ -210,7 +210,7 @@ public:
       return;
     }
 
-    const double publish_rate_hz = this->declare_parameter<double>("publish_rate_hz", 500.0);
+    const double publish_rate_hz = this->declare_parameter<double>("publish_rate_hz", 250.0);
     frame_id_ = this->declare_parameter<std::string>("frame_id", "");
 
     joint_state_pub_ = this->create_publisher<sensor_msgs::msg::JointState>("joint_states", 10);
@@ -226,15 +226,17 @@ public:
       axes_.push_back(axis);
 
       const auto topic = "/" + cfg.ns + "/controller_status";
+      rclcpp::QoS controller_status_qos(rclcpp::KeepLast(10));
+      controller_status_qos.best_effort();
       subs_.push_back(this->create_subscription<kanga_interfaces::msg::ControllerStatus>(
-        topic, 10,
+        topic, controller_status_qos,
         [this, index = axes_.size() - 1](
           const kanga_interfaces::msg::ControllerStatus::SharedPtr msg) {
           this->status_callback(index, msg);
         }));
     }
 
-    const double safe_rate_hz = publish_rate_hz > 0.0 ? publish_rate_hz : 500.0;
+    const double safe_rate_hz = publish_rate_hz > 0.0 ? publish_rate_hz : 250.0;
     timer_ = this->create_wall_timer(
       std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::duration<double>(1.0 / safe_rate_hz)),

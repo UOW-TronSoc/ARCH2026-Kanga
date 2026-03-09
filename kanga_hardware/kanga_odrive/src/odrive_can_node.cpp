@@ -35,10 +35,12 @@ ODriveCanNode::ODriveCanNode(const std::string& node_name) : rclcpp::Node(node_n
     rclcpp::Node::declare_parameter<bool>("axis_idle_on_shutdown", false);
     rclcpp::Node::declare_parameter<bool>("control_message_in_radians_per_second", false);
 
-    rclcpp::QoS ctrl_stat_qos(rclcpp::KeepAll{});
+    rclcpp::QoS ctrl_stat_qos(rclcpp::KeepLast(10));
+    ctrl_stat_qos.best_effort();
     ctrl_publisher_ = rclcpp::Node::create_publisher<ControllerStatus>("controller_status", ctrl_stat_qos);
     
-    rclcpp::QoS odrv_stat_qos(rclcpp::KeepAll{});
+    rclcpp::QoS odrv_stat_qos(rclcpp::KeepLast(10));
+    odrv_stat_qos.best_effort();
     odrv_publisher_ = rclcpp::Node::create_publisher<ODriveStatus>("odrive_status", odrv_stat_qos);
 
     rclcpp::QoS ctrl_msg_qos(rclcpp::KeepLast(1));

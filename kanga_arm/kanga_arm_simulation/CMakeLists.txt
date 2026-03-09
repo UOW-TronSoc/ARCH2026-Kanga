@@ -10,7 +10,7 @@ endif()
 # Standard ROS2 stuffs
 find_package(ament_cmake REQUIRED)
 
-option(BUILD_RAISIM_BRIDGE "Build the RaiSim bridge node" ON)
+option(BUILD_RAISIM_BRIDGE "Build the RaiSim bridge node when RaiSim is available" ON)
 
 if(BUILD_RAISIM_BRIDGE)
   find_package(rclcpp REQUIRED)
@@ -33,17 +33,21 @@ if(BUILD_RAISIM_BRIDGE)
     endif()
   endforeach()
 
-  find_package(raisim CONFIG REQUIRED)
-  find_package(Eigen3 REQUIRED)
-  find_package(PythonLibs 3 REQUIRED)
-  include_directories(
-      ${EIGEN3_INCLUDE_DIRS}
-      ${PYTHON_INCLUDE_DIRS}
-      # "/home/hunter/Documents/github/importedRepos/matplotlib-cpp"
-  )
+  find_package(raisim CONFIG QUIET)
+  if(NOT raisim_FOUND)
+    message(WARNING "RaiSim was not found. Building kanga_arm_simulation without raisim_bridge.")
+  else()
+    find_package(Eigen3 REQUIRED)
+    find_package(PythonLibs 3 REQUIRED)
+    include_directories(
+        ${EIGEN3_INCLUDE_DIRS}
+        ${PYTHON_INCLUDE_DIRS}
+        # "/home/hunter/Documents/github/importedRepos/matplotlib-cpp"
+    )
 
-  add_executable(raisim_bridge src/raisim_bridge.cpp)
-  ament_target_dependencies(raisim_bridge rclcpp sensor_msgs std_msgs geometry_msgs Eigen3 raisim PythonLibs)
+    add_executable(raisim_bridge src/raisim_bridge.cpp)
+    ament_target_dependencies(raisim_bridge rclcpp sensor_msgs std_msgs geometry_msgs Eigen3 raisim PythonLibs)
+  endif()
 endif()
 
 if(BUILD_TESTING)
