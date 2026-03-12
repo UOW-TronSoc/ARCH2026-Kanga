@@ -19,10 +19,14 @@ ament_target_dependencies(joy_to_world_state_control rclcpp sensor_msgs geometry
 add_executable(joy_to_dual_control src/joy_to_dual_control.cpp)
 ament_target_dependencies(joy_to_dual_control rclcpp sensor_msgs geometry_msgs)
 
+add_executable(joy_to_ee_state_control src/joy_to_ee_state_control.cpp)
+ament_target_dependencies(joy_to_ee_state_control rclcpp sensor_msgs geometry_msgs)
+
 install(TARGETS
   joy_to_joint_control
   joy_to_world_state_control
   joy_to_dual_control
+  joy_to_ee_state_control
   DESTINATION lib/${PROJECT_NAME}
 )
 

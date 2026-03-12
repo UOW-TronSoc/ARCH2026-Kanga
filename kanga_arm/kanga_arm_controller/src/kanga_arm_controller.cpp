@@ -41,10 +41,15 @@ public:
 			"joint_velocity_invert", std::vector<bool>(dof, false));
 		joint_max_velocity_ = this->declare_parameter<std::vector<double>>(
 			"joint_max_velocity", std::vector<double>(dof, std::numeric_limits<double>::infinity()));
+		joint_max_velocity_direct_ = this->declare_parameter<std::vector<double>>(
+			"joint_max_velocity_direct", std::vector<double>{});
+		joint_max_velocity_kinematics_ = this->declare_parameter<std::vector<double>>(
+			"joint_max_velocity_kinematics", std::vector<double>{});
 		world_max_velocity_ = this->declare_parameter<std::vector<double>>(
 			"world_max_velocity", std::vector<double>(6, std::numeric_limits<double>::infinity()));
 		hold_position_on_stale_ = this->declare_parameter<bool>("hold_position_on_stale", true);
 		command_stale_timeout_s_ = this->declare_parameter<double>("command_stale_timeout_s", 0.5);
+		control_input_frame_ = this->declare_parameter<std::string>("control_input_frame", "world");
 		const auto link_lengths_param = this->declare_parameter<std::vector<double>>(
 			"link_lengths", std::vector<double>{});
 		end_effector_config_ = this->declare_parameter<std::string>("end_effector_config", "roll_tool");
@@ -121,6 +126,32 @@ public:
 			joint_max_velocity_.resize(dof);
 		}
 
+		if (joint_max_velocity_direct_.empty())
+		{
+			joint_max_velocity_direct_ = joint_max_velocity_;
+		}
+		else if (joint_max_velocity_direct_.size() < dof)
+		{
+			joint_max_velocity_direct_.resize(dof, std::numeric_limits<double>::infinity());
+		}
+		else if (joint_max_velocity_direct_.size() > dof)
+		{
+			joint_max_velocity_direct_.resize(dof);
+		}
+
+		if (joint_max_velocity_kinematics_.empty())
+		{
+			joint_max_velocity_kinematics_ = joint_max_velocity_;
+		}
+		else if (joint_max_velocity_kinematics_.size() < dof)
+		{
+			joint_max_velocity_kinematics_.resize(dof, std::numeric_limits<double>::infinity());
+		}
+		else if (joint_max_velocity_kinematics_.size() > dof)
+		{
+			joint_max_velocity_kinematics_.resize(dof);
+		}
+
 		if (joint_velocity_invert_.size() < dof)
 		{
 			RCLCPP_WARN(this->get_logger(), "joint_velocity_invert has fewer than %zu entries; padding with false", dof);
@@ -151,6 +182,14 @@ public:
 			if (joint_max_velocity_[i] < 0.0)
 			{
 				joint_max_velocity_[i] = std::abs(joint_max_velocity_[i]);
+			}
+			if (joint_max_velocity_direct_[i] < 0.0)
+			{
+				joint_max_velocity_direct_[i] = std::abs(joint_max_velocity_direct_[i]);
+			}
+			if (joint_max_velocity_kinematics_[i] < 0.0)
+			{
+				joint_max_velocity_kinematics_[i] = std::abs(joint_max_velocity_kinematics_[i]);
 			}
 
 			const auto idx = static_cast<Eigen::Index>(i);
@@ -232,10 +271,21 @@ public:
 			"joint_states", 10,
 			std::bind(&KangaArmController::jointStateCallback, this, std::placeholders::_1));
 
-		// Desired world velocity command subscription.
-		world_velocity_sub_ = this->create_subscription<geometry_msgs::msg::Twist>(
-			"kanga_arm/world_state_control", 10,
-			std::bind(&KangaArmController::worldVelocityCallback, this, std::placeholders::_1));
+		// Desired velocity command subscription (world or end-effector frame).
+		if (control_input_frame_ == "end_effector") {
+			ee_velocity_sub_ = this->create_subscription<geometry_msgs::msg::Twist>(
+				"kanga_arm/ee_state_control", 10,
+				std::bind(&KangaArmController::eeVelocityCallback, this, std::placeholders::_1));
+			joint_control_sub_ = this->create_subscription<sensor_msgs::msg::JointState>(
+				"/kanga_arm/joint_control", 10,
+				std::bind(&KangaArmController::jointControlCallback, this, std::placeholders::_1));
+			RCLCPP_INFO(this->get_logger(), "Subscribed to kanga_arm/ee_state_control and /kanga_arm/joint_control (j1 direct)");
+		} else {
+			world_velocity_sub_ = this->create_subscription<geometry_msgs::msg::Twist>(
+				"kanga_arm/world_state_control", 10,
+				std::bind(&KangaArmController::worldVelocityCallback, this, std::placeholders::_1));
+			RCLCPP_INFO(this->get_logger(), "Subscribed to kanga_arm/world_state_control (world frame)");
+		}
 
 		// Output command publisher for the downstream actuator/control bridge.
 		desired_control_pub_ = this->create_publisher<sensor_msgs::msg::JointState>("joint_desired_control", 10);
@@ -396,32 +446,72 @@ private:
 
 		Eigen::VectorXd joint_velocity_cmd = Eigen::VectorXd::Zero(static_cast<Eigen::Index>(dof));
 
-		// Solve only [x, y, z, pitch] against joints j1..j4.
-		// Roll is a direct command on j5 and is intentionally excluded from Jacobian IK.
-		const size_t chain_dof = std::min<size_t>(4, dof);
-		if (chain_dof > 0 && jacobian.cols() >= static_cast<Eigen::Index>(chain_dof))
+		const bool use_direct_j1 = (control_input_frame_ == "end_effector");
+		const bool is_world_mode = (control_input_frame_ == "world");
+		if (use_direct_j1)
 		{
-			Eigen::MatrixXd task_jacobian(4, static_cast<Eigen::Index>(chain_dof));
-			task_jacobian.block(0, 0, 3, static_cast<Eigen::Index>(chain_dof)) =
-				jacobian.block(0, 0, 3, static_cast<Eigen::Index>(chain_dof));
-			// Pitch is angular y in the command convention.
-			task_jacobian.block(3, 0, 1, static_cast<Eigen::Index>(chain_dof)) =
-				jacobian.block(4, 0, 1, static_cast<Eigen::Index>(chain_dof));
-
-			Eigen::VectorXd task_velocity(4);
-			task_velocity(0) = reference_world_velocity(0); // x
-			task_velocity(1) = reference_world_velocity(1); // y
-			task_velocity(2) = reference_world_velocity(2); // z
-			task_velocity(3) = reference_world_velocity(4); // pitch (angular y)
-
-			const Eigen::MatrixXd task_jacobian_pinv = pseudoInverse(task_jacobian, 1e-4);
-			const Eigen::VectorXd chain_velocity_cmd = task_jacobian_pinv * task_velocity;
-			for (size_t i = 0; i < chain_dof; ++i)
+			// j1 bypasses kinematics: use direct value from joint_control (joy axis -1..1).
+			const double j1_max = joint_max_velocity_direct_[0];
+			double j1_vel = 0.0;
 			{
-				joint_velocity_cmd(static_cast<Eigen::Index>(i)) =
-					(chain_velocity_cmd.size() > static_cast<Eigen::Index>(i))
-						? chain_velocity_cmd(static_cast<Eigen::Index>(i))
-						: 0.0;
+				std::lock_guard<std::mutex> lock(j1_direct_mutex_);
+				j1_vel = direct_j1_velocity_;
+			}
+			j1_vel *= j1_max;  // scale to rad/s
+			joint_velocity_cmd(0) = std::clamp(j1_vel, -j1_max, j1_max);
+
+			// Solve [x, z, pitch] against j2, j3, j4 only (3x3).
+			const size_t chain_dof = 3;
+			if (jacobian.cols() >= 4)
+			{
+				Eigen::MatrixXd task_jacobian(3, chain_dof);
+				task_jacobian.block(0, 0, 1, chain_dof) = jacobian.block(0, 1, 1, chain_dof);  // x
+				task_jacobian.block(1, 0, 1, chain_dof) = jacobian.block(2, 1, 1, chain_dof);  // z
+				task_jacobian.block(2, 0, 1, chain_dof) = jacobian.block(4, 1, 1, chain_dof);  // pitch
+
+				Eigen::VectorXd task_velocity(3);
+				task_velocity(0) = reference_world_velocity(0); // x
+				task_velocity(1) = reference_world_velocity(2);  // z (y excluded)
+				task_velocity(2) = reference_world_velocity(4); // pitch
+
+				const Eigen::MatrixXd task_jacobian_pinv = pseudoInverse(task_jacobian, 1e-4);
+				const Eigen::VectorXd chain_velocity_cmd = task_jacobian_pinv * task_velocity;
+				for (size_t i = 0; i < chain_dof; ++i)
+				{
+					joint_velocity_cmd(static_cast<Eigen::Index>(i) + 1) =
+						(chain_velocity_cmd.size() > static_cast<Eigen::Index>(i))
+							? chain_velocity_cmd(static_cast<Eigen::Index>(i))
+							: 0.0;
+				}
+			}
+		}
+		else
+		{
+			// Solve [x, y, z, pitch] against joints j1..j4.
+			const size_t chain_dof = std::min<size_t>(4, dof);
+			if (chain_dof > 0 && jacobian.cols() >= static_cast<Eigen::Index>(chain_dof))
+			{
+				Eigen::MatrixXd task_jacobian(4, static_cast<Eigen::Index>(chain_dof));
+				task_jacobian.block(0, 0, 3, static_cast<Eigen::Index>(chain_dof)) =
+					jacobian.block(0, 0, 3, static_cast<Eigen::Index>(chain_dof));
+				task_jacobian.block(3, 0, 1, static_cast<Eigen::Index>(chain_dof)) =
+					jacobian.block(4, 0, 1, static_cast<Eigen::Index>(chain_dof));
+
+				Eigen::VectorXd task_velocity(4);
+				task_velocity(0) = reference_world_velocity(0);
+				task_velocity(1) = reference_world_velocity(1);
+				task_velocity(2) = reference_world_velocity(2);
+				task_velocity(3) = reference_world_velocity(4);
+
+				const Eigen::MatrixXd task_jacobian_pinv = pseudoInverse(task_jacobian, 1e-4);
+				const Eigen::VectorXd chain_velocity_cmd = task_jacobian_pinv * task_velocity;
+				for (size_t i = 0; i < chain_dof; ++i)
+				{
+					joint_velocity_cmd(static_cast<Eigen::Index>(i)) =
+						(chain_velocity_cmd.size() > static_cast<Eigen::Index>(i))
+							? chain_velocity_cmd(static_cast<Eigen::Index>(i))
+							: 0.0;
+				}
 			}
 		}
 
@@ -431,11 +521,21 @@ private:
 			joint_velocity_cmd(4) = reference_world_velocity(3); // roll (angular x)
 		}
 
+		// Joint state control (direct) limits: joint mode=all, world=none, EE=j1,j5.
+		// Kinematics limits: joint=none, world=all, EE=j2,j3,j4.
+		const auto maxVelForJoint = [this, is_world_mode](size_t i) -> double {
+			if (is_world_mode) return joint_max_velocity_kinematics_[i];
+			if (control_input_frame_ == "end_effector" && (i == 0 || i == 4))
+				return joint_max_velocity_direct_[i];
+			return joint_max_velocity_kinematics_[i];
+		};
+
 		for (size_t i = 0; i < dof; ++i)
 		{
 			const auto idx = static_cast<Eigen::Index>(i);
+			const double max_vel = maxVelForJoint(i);
 			double cmd_vel = (joint_velocity_cmd.size() > idx) ? joint_velocity_cmd(idx) : 0.0;
-			cmd_vel = std::clamp(cmd_vel, -joint_max_velocity_[i], joint_max_velocity_[i]);
+			cmd_vel = std::clamp(cmd_vel, -max_vel, max_vel);
 			if (joint_velocity_invert_[i])
 			{
 				cmd_vel = -cmd_vel;
@@ -485,6 +585,18 @@ private:
 			endpoint_twist_msg.angular.z = measured_cartesian_twist(5);
 		}
 		endpoint_twist_publisher_->publish(endpoint_twist_msg);
+	}
+
+	/**
+	 * @brief Stores direct j1 velocity from joint_control (EE mode only).
+	 *
+	 * Used when control_input_frame is end_effector to bypass kinematics for j1.
+	 */
+	void jointControlCallback(const sensor_msgs::msg::JointState::SharedPtr msg)
+	{
+		std::lock_guard<std::mutex> lock(j1_direct_mutex_);
+		direct_j1_velocity_ = (msg->velocity.size() > 0) ? msg->velocity[0] : 0.0;
+		last_j1_direct_time_ = steady_clock_.now();
 	}
 
 	/**
@@ -556,6 +668,48 @@ private:
 	}
 
 	/**
+	 * @brief Stores desired end-effector-frame velocity, transforms to world frame.
+	 *
+	 * Uses current end-effector orientation from forward kinematics to rotate
+	 * the twist into world frame before caching.
+	 */
+	void eeVelocityCallback(const geometry_msgs::msg::Twist::SharedPtr msg)
+	{
+		const Eigen::Isometry3d ee_tf = kinematics_.forwardTransform(joint_position);
+		const Eigen::Matrix3d R = ee_tf.rotation();
+
+		Eigen::Vector3d v_ee(msg->linear.x, msg->linear.y, msg->linear.z);
+		Eigen::Vector3d v_world = R * v_ee;
+		// Transform only pitch and yaw; roll goes directly to j5 and must not affect pitch/yaw.
+		// Otherwise when j1 is rotated, R*(roll,0,0) has non-zero y,z and incorrectly commands j2-j4.
+		Eigen::Vector3d omega_ee_pitch_yaw(0.0, msg->angular.y, msg->angular.z);
+		Eigen::Vector3d omega_world_pitch_yaw = R * omega_ee_pitch_yaw;
+
+		const auto clamp_world = [this](size_t idx, double value) -> double
+		{
+			const double max_vel = world_max_velocity_[idx];
+			return std::clamp(value, -max_vel, max_vel);
+		};
+
+		std::lock_guard<std::mutex> lock(command_mutex_);
+		reference_world_velocity_(0) = clamp_world(0, v_world.x());
+		reference_world_velocity_(1) = clamp_world(1, v_world.y());
+		reference_world_velocity_(2) = clamp_world(2, v_world.z());
+		// Roll (j5) bypasses kinematics: pass directly to joint, no frame transform.
+		if (has_roll_joint_)
+		{
+			reference_world_velocity_(3) = clamp_world(3, msg->angular.x);
+		}
+		else
+		{
+			reference_world_velocity_(3) = 0.0;
+		}
+		reference_world_velocity_(4) = clamp_world(4, omega_world_pitch_yaw.y());
+		reference_world_velocity_(5) = clamp_world(5, omega_world_pitch_yaw.z());
+		last_velocity_time_ = steady_clock_.now();
+	}
+
+	/**
 	 * @brief Damped least-squares pseudoinverse for a possibly non-square matrix.
 	 */
 	Eigen::MatrixXd pseudoInverse(const Eigen::MatrixXd &matrix, double damping) const
@@ -576,7 +730,9 @@ private:
 
 	// ROS interfaces.
 	rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr joint_state_sub_;
+	rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr joint_control_sub_;
 	rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr world_velocity_sub_;
+	rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr ee_velocity_sub_;
 	rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr desired_control_pub_;
 	rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr endpoint_publisher_;
 	rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr endpoint_twist_publisher_;
@@ -601,15 +757,21 @@ private:
 	rclcpp::Clock steady_clock_{RCL_STEADY_TIME};
 	rclcpp::Time last_velocity_time_;
 	std::mutex command_mutex_;
+	double direct_j1_velocity_{0.0};
+	rclcpp::Time last_j1_direct_time_{0, 0, RCL_STEADY_TIME};
+	std::mutex j1_direct_mutex_;
 
 	// Control loop configuration.
 	std::vector<double> joint_min_limits_;
 	std::vector<double> joint_max_limits_;
 	std::vector<bool> joint_velocity_invert_;
 	std::vector<double> joint_max_velocity_;
+	std::vector<double> joint_max_velocity_direct_;
+	std::vector<double> joint_max_velocity_kinematics_;
 	std::vector<double> world_max_velocity_;
 	bool hold_position_on_stale_{true};
 	double command_stale_timeout_s_{0.5};
+	std::string control_input_frame_{"world"};
 	float control_time_step_ms;
 	const size_t dof = 5;
 };

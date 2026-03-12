@@ -48,6 +48,8 @@ public:
       "joint_velocity_invert", std::vector<bool>(dof, false));
     joint_max_velocity_ = this->declare_parameter<std::vector<double>>(
       "joint_max_velocity", std::vector<double>(dof, std::numeric_limits<double>::infinity()));
+    joint_max_velocity_direct_ = this->declare_parameter<std::vector<double>>(
+      "joint_max_velocity_direct", std::vector<double>{});
 
     if (joint_min_limits_.size() < dof) {
       RCLCPP_WARN(this->get_logger(), "joint_min_limits has fewer than %zu entries; padding with -inf", dof);
@@ -77,6 +79,14 @@ public:
       joint_max_velocity_.resize(dof);
     }
 
+    if (joint_max_velocity_direct_.empty()) {
+      joint_max_velocity_direct_ = joint_max_velocity_;
+    } else if (joint_max_velocity_direct_.size() < dof) {
+      joint_max_velocity_direct_.resize(dof, std::numeric_limits<double>::infinity());
+    } else if (joint_max_velocity_direct_.size() > dof) {
+      joint_max_velocity_direct_.resize(dof);
+    }
+
     for (size_t i = 0; i < dof; ++i) {
       if (joint_min_limits_[i] > joint_max_limits_[i]) {
         RCLCPP_WARN(
@@ -85,12 +95,12 @@ public:
           i);
         std::swap(joint_min_limits_[i], joint_max_limits_[i]);
       }
-      if (joint_max_velocity_[i] < 0.0) {
+      if (joint_max_velocity_direct_[i] < 0.0) {
         RCLCPP_WARN(
           this->get_logger(),
-          "joint_max_velocity[%zu] is negative. Using absolute value.",
+          "joint_max_velocity_direct[%zu] is negative. Using absolute value.",
           i);
-        joint_max_velocity_[i] = std::abs(joint_max_velocity_[i]);
+        joint_max_velocity_direct_[i] = std::abs(joint_max_velocity_direct_[i]);
       }
       current_position_[i] = std::clamp(current_position_[i], joint_min_limits_[i], joint_max_limits_[i]);
     }
@@ -139,7 +149,7 @@ private:
       if (joint_velocity_invert_[i]) {
         velocity = -velocity;
       }
-      velocity = std::clamp(velocity, -joint_max_velocity_[i], joint_max_velocity_[i]);
+      velocity = std::clamp(velocity, -joint_max_velocity_direct_[i], joint_max_velocity_direct_[i]);
       latest_velocity_[i] = velocity;
     }
     for (size_t i = controlled_dof; i < dof; ++i) {
@@ -219,7 +229,7 @@ private:
       }
 
       filtered_velocity_[i] = std::clamp(
-        filtered_velocity_[i], -joint_max_velocity_[i], joint_max_velocity_[i]);
+        filtered_velocity_[i], -joint_max_velocity_direct_[i], joint_max_velocity_direct_[i]);
       velocity[i] = filtered_velocity_[i];
       const double measured_position_limit_frame = have_feedback_
         ? feedback_position_[i]
@@ -267,6 +277,7 @@ private:
   std::vector<double> joint_max_limits_;
   std::vector<bool> joint_velocity_invert_;
   std::vector<double> joint_max_velocity_;
+  std::vector<double> joint_max_velocity_direct_;
   rclcpp::Clock steady_clock_{RCL_STEADY_TIME};
   rclcpp::Time last_velocity_time_;
   std::mutex command_mutex_;

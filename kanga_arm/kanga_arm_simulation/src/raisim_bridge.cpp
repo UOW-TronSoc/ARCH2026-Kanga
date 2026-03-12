@@ -28,24 +28,6 @@ public:
 			// Logging info
 			RCLCPP_INFO(this->get_logger(), "Time step for simulation: %f ms", pd_time_step_ms);
 
-			fk_validation_enabled_ = this->declare_parameter<bool>("fk_validation_enabled", true);
-			const auto fk_validation_offset_param = this->declare_parameter<std::vector<double>>(
-				"fk_validation_offset_xyz", std::vector<double>{0.06, -0.235, -2.0});
-			if (fk_validation_offset_param.size() == 3U)
-			{
-				fk_validation_offset_ = Eigen::Vector3d(
-					fk_validation_offset_param[0],
-					fk_validation_offset_param[1],
-					fk_validation_offset_param[2]);
-			}
-			else
-			{
-				RCLCPP_WARN(
-					this->get_logger(),
-					"fk_validation_offset_xyz must have 3 elements. Using default [0.06, -0.235, -2.0].");
-			}
-			fk_validation_log_period_ms_ = this->declare_parameter<int>(
-				"fk_validation_log_period_ms", 1000);
 			end_effector_config_ = this->declare_parameter<std::string>("end_effector_config", "roll_tool");
 
 			const auto link_lengths_param = this->declare_parameter<std::vector<double>>(
@@ -116,6 +98,20 @@ public:
 		robot = world.addArticulatedSystem(urdf_file);
 		robot->setName("Kanga Arm");
 
+		// Simulator-only: reverse j3 limit magnitudes (lower=-2.26893, upper=1.309)
+		{
+			auto limits = robot->getJointLimits();
+			constexpr size_t j3_idx = 2;
+			if (limits.size() > j3_idx)
+			{
+				std::vector<raisim::Vec<2>> limits_copy = limits;
+				double lo = limits_copy[j3_idx][0];
+				double hi = limits_copy[j3_idx][1];
+				limits_copy[j3_idx][0] = -std::abs(hi);
+				limits_copy[j3_idx][1] = std::abs(lo);
+				robot->setJointLimits(limits_copy);
+			}
+		}
 
 		world.setGravity({0, 0, 0});
 
@@ -342,29 +338,6 @@ private:
 		robot->getBodyOrientation(kEndLinkBodyIndex, ee_rot_rs); // world_R_link
 			Eigen::Vector3d sphere_pos = ee_pos_rs.e() + ee_rot_rs.e() * tool_offset;
 			comSphere->setPosition(sphere_pos[0], sphere_pos[1], sphere_pos[2]);
-
-			if (fk_validation_enabled_)
-			{
-				Eigen::VectorXd q_for_fk = Eigen::VectorXd::Zero(5);
-				const size_t q_dim = std::min<size_t>(5, static_cast<size_t>(gc.size()));
-				for (size_t i = 0; i < q_dim; ++i)
-				{
-					q_for_fk[static_cast<Eigen::Index>(i)] = applyEncoderInversion(
-						i, gc[static_cast<Eigen::Index>(i)]);
-				}
-
-				const Eigen::Vector3d ee_current = sphere_pos + fk_validation_offset_;
-				const Eigen::Vector3d fk_calculated = computeFkPosition(q_for_fk);
-				const int throttle_ms = std::max(1, fk_validation_log_period_ms_);
-
-				RCLCPP_INFO_THROTTLE(
-					this->get_logger(), *this->get_clock(), throttle_ms,
-					"FK check | q(rad)=[%.5f, %.5f, %.5f, %.5f, %.5f] | "
-					"ee_current=(%.4f, %.4f, %.4f) | fk_calculated=(%.4f, %.4f, %.4f)",
-					q_for_fk(0), q_for_fk(1), q_for_fk(2), q_for_fk(3), q_for_fk(4),
-					ee_current.x(), ee_current.y(), ee_current.z(),
-					fk_calculated.x(), fk_calculated.y(), fk_calculated.z());
-			}
 
 		// Build a single time stamp for this step in sim time
 		builtin_interfaces::msg::Time stamp;
@@ -593,9 +566,6 @@ private:
 		double dt_ = 0.0;		  // seconds, equals world timestep
 		double stop_hold_velocity_epsilon_{0.02};
 
-		bool fk_validation_enabled_{true};
-		Eigen::Vector3d fk_validation_offset_{0.06, -0.235, -2.0};
-		int fk_validation_log_period_ms_{1000};
 		std::string end_effector_config_{"roll_tool"};
 		std::array<double, 4> dh_d_{0.084, 0.111, -0.0905, 0.06844};
 		std::array<double, 4> dh_a_{0.0, -0.449997, -0.390, 0.0};

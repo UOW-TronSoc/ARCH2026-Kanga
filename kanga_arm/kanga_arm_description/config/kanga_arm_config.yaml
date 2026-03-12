@@ -8,10 +8,17 @@
     joint_max_limits: [1.5708, 2.44346, 1.309, 0.785398163, 3.14159]
     joint_velocity_invert: [true, false, true, false, false]
     # Max commanded joint velocity [rad/s] per joint [arm_j1..arm_j5]
+    # joint_max_velocity: fallback when direct/kinematics not set
     joint_max_velocity: [3.1415, 3.1415, 3.1415, 3.1415, 3.1415]
+    # Joint state control (direct): joint mode=all, EE mode=j1,j5. Rad/s.
+    joint_max_velocity_direct: [0.31415, 0.31415, 0.31415, 0.31415, 0.31415]
+    # Kinematics control (IK): world mode=all, EE mode=j2,j3,j4. Rad/s.
+    joint_max_velocity_kinematics: [3.1415, 3.1415, 3.1415, 3.1415, 3.1415]
     # Max world-space command velocity [x, y, z, roll, pitch, yaw].
     # Units: linear m/s, angular rad/s.
     world_max_velocity: [0.1, 0.1, 0.1, 0.5, 0.5, 0.5]
+    # Control input frame: world (fixed) | end_effector (tool-relative)
+    control_input_frame: "world"
     # End-effector mode for world-space controller: roll_tool | scoop
     end_effector_config: "roll_tool"
     # Preferred tool transforms (row-major 4x4 homogeneous matrices).

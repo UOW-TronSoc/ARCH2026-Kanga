@@ -2,18 +2,28 @@
 #include <string>
 #include <vector>
 
+#include <geometry_msgs/msg/twist.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/joy.hpp>
 #include <sensor_msgs/msg/joint_state.hpp>
 
-class JoyToJointControl : public rclcpp::Node
+/**
+ * @brief Joy-to-end-effector-frame control node.
+ *
+ * Same structure as world space control: publishes Twist (linear x,y,z and
+ * angular pitch, roll) plus joint control for j6. The twist is interpreted
+ * in the end-effector coordinate frame (X=forward, Y=left, Z=up relative to
+ * the tool). The arm controller transforms this to world frame internally.
+ */
+class JoyToEEStateControl : public rclcpp::Node
 {
 public:
-  JoyToJointControl()
-  : Node("joy_to_joint_control")
+  JoyToEEStateControl()
+  : Node("joy_to_ee_state_control")
   {
     axis_indices_ = this->declare_parameter<std::vector<int64_t>>(
       "axis_indices", std::vector<int64_t>{0, 1, 2, 3});
+    joint_axis0_index_ = this->declare_parameter<int64_t>("joint_axis0_index", 0);
     axis_negative_j6_index_ = this->declare_parameter<int64_t>("axis_negative_j6", 4);
     axis_positive_j6_index_ = this->declare_parameter<int64_t>("axis_positive_j6", 5);
     j6_axis_pressed_threshold_ = this->declare_parameter<double>("j6_axis_pressed_threshold", 1.0);
@@ -21,15 +31,22 @@ public:
     j6_max_angle_ = this->declare_parameter<double>("j6_max_angle", 180.0);
     j6_start_angle_ = this->declare_parameter<double>("j6_start_angle", 90.0);
     j6_pwm_increment_speed_ = this->declare_parameter<double>("j6_pwm_increment_speed", 30.0);
-    button_negative_j5_index_ = this->declare_parameter<int64_t>("button_negative_j5", 7);
-    button_positive_j5_index_ = this->declare_parameter<int64_t>("button_positive_j5", 8);
-    joint_topic_ = this->declare_parameter<std::string>(
+    button_negative_roll_index_ = this->declare_parameter<int64_t>("button_negative_roll", 10);
+    button_positive_roll_index_ = this->declare_parameter<int64_t>("button_positive_roll", 9);
+
+    linear_scale_ = this->declare_parameter<double>("linear_scale", 1.0);
+    pitch_scale_ = this->declare_parameter<double>("pitch_scale", 1.0);
+    roll_scale_ = this->declare_parameter<double>("roll_scale", 1.0);
+
+    ee_control_topic_ = this->declare_parameter<std::string>(
+      "ee_control_topic", "kanga_arm/ee_state_control");
+    joint_control_topic_ = this->declare_parameter<std::string>(
       "joint_control_topic", "/kanga_arm/joint_control");
 
     if (axis_indices_.size() < 4) {
       RCLCPP_WARN(
         this->get_logger(),
-        "axis_indices has fewer than 4 entries; missing joints will be zero");
+        "axis_indices has fewer than 4 entries; missing commands will be zero");
       axis_indices_.resize(4, -1);
     } else if (axis_indices_.size() > 4) {
       axis_indices_.resize(4);
@@ -40,13 +57,16 @@ public:
     }
     j6_position_ = std::clamp(j6_start_angle_, j6_min_angle_, j6_max_angle_);
 
-    joint_pub_ = this->create_publisher<sensor_msgs::msg::JointState>(joint_topic_, 10);
+    twist_pub_ = this->create_publisher<geometry_msgs::msg::Twist>(ee_control_topic_, 10);
+    joint_pub_ = this->create_publisher<sensor_msgs::msg::JointState>(joint_control_topic_, 10);
     joy_sub_ = this->create_subscription<sensor_msgs::msg::Joy>(
-      "/joy", 10, std::bind(&JoyToJointControl::joyCallback, this, std::placeholders::_1));
+      "/joy", 10, std::bind(&JoyToEEStateControl::joyCallback, this, std::placeholders::_1));
 
     RCLCPP_INFO(
       this->get_logger(),
-      "joy_to_joint_control active: /joy -> %s", joint_topic_.c_str());
+      "joy_to_ee_state_control active: /joy -> (%s and %s) [end-effector frame]",
+      ee_control_topic_.c_str(),
+      joint_control_topic_.c_str());
   }
 
 private:
@@ -83,26 +103,32 @@ private:
     const double dt = (now - last_update_time_).seconds();
     last_update_time_ = now;
 
+    geometry_msgs::msg::Twist twist_msg;
     sensor_msgs::msg::JointState joint_msg;
+
+    // Axis mapping: 0->X (forward), 1->Y (left->j1 direct), 2->Z (up), 3->pitch.
+    // linear.y is zeroed; left/right goes to j1 via joint_msg.velocity[0] below.
+    twist_msg.linear.x = - linear_scale_ * readAxis(*msg, axis_indices_[0]);
+    twist_msg.linear.y = 0.0;  // j1 bypasses kinematics, uses joint_control directly
+    twist_msg.linear.z = linear_scale_ * readAxis(*msg, axis_indices_[2]);
+    twist_msg.angular.y = pitch_scale_ * readAxis(*msg, axis_indices_[3]);
+
+    const double roll_negative = readButton(*msg, button_negative_roll_index_);
+    const double roll_positive = readButton(*msg, button_positive_roll_index_);
+    twist_msg.angular.x = - roll_scale_ * (roll_positive - roll_negative);
+    twist_msg.angular.z = 0.0;
+
     joint_msg.header.stamp = this->get_clock()->now();
     joint_msg.name = {"j1", "j2", "j3", "j4", "j5", "j6"};
     joint_msg.velocity.resize(6, 0.0);
     joint_msg.position.resize(6, 0.0);
-
-    joint_msg.velocity[0] = readAxis(*msg, axis_indices_[0]);
-    joint_msg.velocity[1] = readAxis(*msg, axis_indices_[1]);
-    joint_msg.velocity[2] = readAxis(*msg, axis_indices_[2]);
-    joint_msg.velocity[3] = readAxis(*msg, axis_indices_[3]);
-
-    const double j5_negative = readButton(*msg, button_negative_j5_index_);
-    const double j5_positive = readButton(*msg, button_positive_j5_index_);
-    joint_msg.velocity[4] = j5_positive - j5_negative;
+    joint_msg.velocity[0] = readAxis(*msg, joint_axis0_index_);
+    joint_msg.velocity[4] = roll_positive - roll_negative;
 
     const bool j6_positive_pressed = readTriggerPressed(
       *msg, axis_positive_j6_index_, positive_trigger_initialized_);
     const bool j6_negative_pressed = readTriggerPressed(
       *msg, axis_negative_j6_index_, negative_trigger_initialized_);
-
     if (j6_positive_pressed == j6_negative_pressed) {
       joint_msg.velocity[5] = 0.0;
     } else {
@@ -112,18 +138,14 @@ private:
     j6_position_ = std::clamp(j6_position_, j6_min_angle_, j6_max_angle_);
     joint_msg.position[5] = j6_position_;
 
+    twist_pub_->publish(twist_msg);
     joint_pub_->publish(joint_msg);
   }
-
-  rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_pub_;
-  rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_sub_;
 
   bool readTriggerPressed(const sensor_msgs::msg::Joy & msg, int64_t axis_index, bool & initialized)
   {
     const double axis_value = readAxis(msg, axis_index);
     if (!initialized) {
-      // Some drivers report untouched triggers as 0 until first movement.
-      // Treat that as "not pressed" until we observe the released state.
       if (axis_value >= j6_axis_pressed_threshold_) {
         initialized = true;
       } else {
@@ -133,28 +155,37 @@ private:
     return axis_value < j6_axis_pressed_threshold_;
   }
 
+  rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr twist_pub_;
+  rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_pub_;
+  rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr joy_sub_;
+
   std::vector<int64_t> axis_indices_;
+  int64_t joint_axis0_index_{0};
   int64_t axis_negative_j6_index_{4};
   int64_t axis_positive_j6_index_{5};
   double j6_axis_pressed_threshold_{1.0};
   double j6_min_angle_{0.0};
   double j6_max_angle_{180.0};
   double j6_start_angle_{90.0};
-  double j6_pwm_increment_speed_{30.0};  // 1 unit per 100 ms
+  double j6_pwm_increment_speed_{30.0};
   double j6_position_{0.0};
   rclcpp::Clock steady_clock_{RCL_STEADY_TIME};
   rclcpp::Time last_update_time_{0, 0, RCL_STEADY_TIME};
   bool negative_trigger_initialized_{false};
   bool positive_trigger_initialized_{false};
-  int64_t button_negative_j5_index_{7};
-  int64_t button_positive_j5_index_{8};
-  std::string joint_topic_;
+  int64_t button_negative_roll_index_{10};
+  int64_t button_positive_roll_index_{9};
+  double linear_scale_{1.0};
+  double pitch_scale_{1.0};
+  double roll_scale_{1.0};
+  std::string ee_control_topic_;
+  std::string joint_control_topic_;
 };
 
 int main(int argc, char ** argv)
 {
   rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<JoyToJointControl>());
+  rclcpp::spin(std::make_shared<JoyToEEStateControl>());
   rclcpp::shutdown();
   return 0;
 }

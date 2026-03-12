@@ -14,6 +14,7 @@ def generate_launch_description() -> LaunchDescription:
     use_sim = LaunchConfiguration("use_sim")
     enable_drive = LaunchConfiguration("enable_drive")
     tool_mode = LaunchConfiguration("tool_mode")
+    control_frame = LaunchConfiguration("control_frame", default="world")
 
     robot_description_path = get_package_share_directory("kanga_arm_description")
     operation_path = get_package_share_directory("kanga_arm_bringup")
@@ -49,6 +50,7 @@ def generate_launch_description() -> LaunchDescription:
             kanga_arm_config,
             operation_params,
             {"use_sim_time": use_sim},
+            {"control_input_frame": control_frame},
         ],
     )
 
@@ -56,7 +58,20 @@ def generate_launch_description() -> LaunchDescription:
     joy_world_control_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(joy_control_path, "launch", "joy_arm_world_control.launch.py")
-        )
+        ),
+        condition=IfCondition(
+            PythonExpression(["'", control_frame, "' == 'world'"])
+        ),
+    )
+
+    # Joystick -> end-effector-frame command bridge
+    joy_ee_control_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(joy_control_path, "launch", "joy_arm_ee_control.launch.py")
+        ),
+        condition=IfCondition(
+            PythonExpression(["'", control_frame, "' == 'end_effector'"])
+        ),
     )
 
     # Simulation when only sim is enabled
@@ -133,8 +148,14 @@ def generate_launch_description() -> LaunchDescription:
             default_value="end_effector",
             description="Tool mode: end_effector enables end_effector mapper, gripper disables it.",
         ),
+        DeclareLaunchArgument(
+            "control_frame",
+            default_value="world",
+            description="Control input frame: world (fixed) or end_effector (tool-relative).",
+        ),
         control_node,
         joy_world_control_launch,
+        joy_ee_control_launch,
         raisim_sim_only,
         raisim_sim_with_drive,
         arm_drive_launch,

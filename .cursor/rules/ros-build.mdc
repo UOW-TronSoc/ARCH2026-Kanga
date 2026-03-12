@@ -1,0 +1,19 @@
+---
+description: ROS/colcon build directory - always use workspace root
+alwaysApply: true
+---
+
+# ROS Build Directory
+
+When building ROS 2 packages (colcon build), always run from the workspace root:
+
+```
+/home/hunter/kanga
+```
+
+**Correct:**
+```bash
+cd /home/hunter/kanga && colcon build --packages-select <package_name>
+```
+
+**Wrong:** Do not run colcon from `/home/hunter/kanga/src` — that is the packages directory, not the workspace root.
