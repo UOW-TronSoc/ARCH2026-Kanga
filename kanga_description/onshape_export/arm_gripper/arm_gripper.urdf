@@ -5,9 +5,9 @@
   <!-- Link l4 -->
   <link name="l4">
     <inertial>
-      <origin xyz="-0.0142313 0.0287561 0.0284316" rpy="0 0 0"/>
+      <origin xyz="-0.0170215 0.0424528 0.0283404" rpy="0 0 0"/>
       <mass value="0.8"/>
-      <inertia ixx="0.00330355" ixy="0.000978114" ixz="0.000116635" iyy="0.000846989" iyz="-0.000183013" izz="0.00370143"/>
+      <inertia ixx="0.00298359" ixy="0.00100337" ixz="0.000141004" iyy="0.000967864" iyz="-0.000226967" izz="0.00343441"/>
     </inertial>
     <!-- Part l4 -->
     <visual>
@@ -36,7 +36,7 @@
     </inertial>
   </link>
   <joint name="rsd435i_mount_frame" type="fixed">
-    <origin xyz="-0.0634502 0.0939187 0.056" rpy="1.5708 -0 -1.48353"/>
+    <origin xyz="-0.0660965 0.0953744 0.056" rpy="1.5708 -0 -1.5708"/>
     <parent link="l4"/>
     <child link="rsd435i_mount"/>
     <axis xyz="0 0 0"/>

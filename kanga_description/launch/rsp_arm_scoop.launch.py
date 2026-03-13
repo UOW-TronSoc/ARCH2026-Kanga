@@ -11,9 +11,9 @@ from launch.substitutions import Command, FindExecutable
 
 def generate_launch_description():
     pkg_share = get_package_share_directory("kanga_description")
-    # Assembly visualizer (arm payload + gripper payload).
-    xacro_path = os.path.join(pkg_share, "urdf", "assemblies", "arm_gripper_descr.urdf.xacro")
-    rviz_config_path = os.path.join(pkg_share, "rviz", "rsp_arm_gripper.rviz")
+    # Assembly visualizer (arm payload + scoop payload).
+    xacro_path = os.path.join(pkg_share, "urdf", "assemblies", "arm_scoop_descr.urdf.xacro")
+    rviz_config_path = os.path.join(pkg_share, "rviz", "rsp_arm_scoop.rviz")
 
     robot_description = ParameterValue(
         Command([FindExecutable(name="xacro"), " ", xacro_path]), value_type=str

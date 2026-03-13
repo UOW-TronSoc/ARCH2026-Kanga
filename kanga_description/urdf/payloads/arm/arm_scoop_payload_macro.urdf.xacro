@@ -1,0 +1,76 @@
+<?xml version="1.0" ?>
+<robot name="arm_scoop_payload_macro" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!-- Reuse RealSense D435i camera macro. -->
+  <xacro:include filename="$(find realsense2_description)/urdf/_d435i.urdf.xacro"/>
+
+  <!-- Reusable arm scoop payload.
+       Params:
+       - parent: link this payload mounts to
+       - xyz/rpy: payload pose relative to parent
+       - prefix: optional name prefix for multi-instance safety
+       - camera_name: base name for realsense camera links
+       - use_nominal_extrinsics: publish nominal camera optical/extrinsic frames -->
+  <xacro:macro name="arm_scoop_payload" params="parent xyz:='0 0 0' rpy:='0 0 0' prefix:='' camera_name:='d435i' use_nominal_extrinsics:='true'">
+    <joint name="${prefix}arm_scoop_payload_mount_joint" type="fixed">
+      <origin xyz="${xyz}" rpy="${rpy}"/>
+      <parent link="${parent}"/>
+      <child link="${prefix}l4"/>
+      <axis xyz="0 0 0"/>
+    </joint>
+
+    <link name="${prefix}l4">
+      <inertial>
+        <origin xyz="-0.00610686 -0.00444101 0.0292163" rpy="0 0 0"/>
+        <mass value="0.8"/>
+        <inertia ixx="0.00542103" ixy="0.00140642" ixz="8.36659e-05" iyy="0.00132481" iyz="-0.000129984" izz="0.00548139"/>
+      </inertial>
+      <visual>
+        <origin xyz="0.0178029 -0.0177509 -0.0105145" rpy="1.2979e-08 -1.5708 0"/>
+        <geometry>
+          <mesh filename="package://kanga_description/meshes/payloads/arm_scoop/l4.stl"/>
+        </geometry>
+        <material name="l4_material">
+          <color rgba="0.0862745 0.317647 0.690196 1"/>
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0.0178029 -0.0177509 -0.0105145" rpy="1.2979e-08 -1.5708 0"/>
+        <geometry>
+          <mesh filename="package://kanga_description/meshes/payloads/arm_scoop/l4.stl"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <!-- Camera mount frame exported from CAD; D435i model is attached to this frame. -->
+    <link name="${prefix}rsd435i_mount">
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="1e-9"/>
+        <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+      </inertial>
+    </link>
+    <joint name="${prefix}rsd435i_mount_frame" type="fixed">
+      <origin xyz="-0.0660965 0.0953744 0.056" rpy="1.5708 0 -1.5708"/>
+      <parent link="${prefix}l4"/>
+      <child link="${prefix}rsd435i_mount"/>
+      <axis xyz="0 0 0"/>
+    </joint>
+    <xacro:sensor_d435i parent="${prefix}rsd435i_mount" name="${prefix}${camera_name}" use_nominal_extrinsics="${use_nominal_extrinsics}">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </xacro:sensor_d435i>
+
+    <link name="${prefix}scoop_endpoint">
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="1e-9"/>
+        <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+      </inertial>
+    </link>
+    <joint name="${prefix}scoop_endpoint_frame" type="fixed">
+      <origin xyz="0.0305 -0.139 0.02894" rpy="1.5708 1.5708 0"/>
+      <parent link="${prefix}l4"/>
+      <child link="${prefix}scoop_endpoint"/>
+      <axis xyz="0 0 0"/>
+    </joint>
+  </xacro:macro>
+</robot>

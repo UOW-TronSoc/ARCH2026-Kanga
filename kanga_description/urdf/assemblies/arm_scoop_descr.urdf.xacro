@@ -1,0 +1,14 @@
+<?xml version="1.0" ?>
+<robot name="arm_scoop_assembly" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!-- Top-level assembly:
+       combine arm payload + arm scoop payload (with D435i). -->
+  <xacro:include filename="$(find kanga_description)/urdf/payloads/arm/arm_payload_macro.urdf.xacro"/>
+  <xacro:include filename="$(find kanga_description)/urdf/payloads/arm/arm_scoop_payload_macro.urdf.xacro"/>
+
+  <!-- Local root for standalone assembly visualization. -->
+  <link name="base_link"/>
+  <!-- Build arm first. -->
+  <xacro:arm_payload parent="base_link"/>
+  <!-- Mount scoop to the arm end-effector frame. -->
+  <xacro:arm_scoop_payload parent="end_effector_mount"/>
+</robot>

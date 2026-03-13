@@ -51,6 +51,7 @@ def generate_launch_description() -> LaunchDescription:
             operation_params,
             {"use_sim_time": use_sim},
             {"control_input_frame": control_frame},
+            {"end_effector_config": tool_mode},
         ],
     )
 
@@ -91,6 +92,7 @@ def generate_launch_description() -> LaunchDescription:
             operation_params,
             simulation_params,
             {"use_sim_time": use_sim},
+            {"end_effector_config": tool_mode},
         ],
     )
 
@@ -118,6 +120,7 @@ def generate_launch_description() -> LaunchDescription:
             operation_params,
             simulation_params,
             {"use_sim_time": use_sim},
+            {"end_effector_config": tool_mode},
         ],
     )
 
@@ -146,7 +149,7 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument(
             "tool_mode",
             default_value="end_effector",
-            description="Tool mode: end_effector enables end_effector mapper, gripper disables it.",
+            description="Tool: end_effector (J5 roll + J6 gripper) or scoop (rigid). Sets kinematics tool transform.",
         ),
         DeclareLaunchArgument(
             "control_frame",

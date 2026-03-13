@@ -57,7 +57,7 @@ def generate_launch_description() -> LaunchDescription:
         DeclareLaunchArgument(
             "tool_mode",
             default_value="end_effector",
-            description="Tool mode: end_effector enables end_effector_mapper, gripper disables it",
+            description="Tool: end_effector (J5 roll + J6 gripper) or scoop (rigid). Mapper runs only for end_effector.",
         ),
         odrive_multi_launch,
         arm_mapper_node,

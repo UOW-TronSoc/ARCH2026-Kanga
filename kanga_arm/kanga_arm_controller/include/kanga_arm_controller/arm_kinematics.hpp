@@ -94,7 +94,7 @@ public:
   bool setEndEffectorMode(const std::string & mode)
   {
     const std::string mode_lower = toLower(mode);
-    if (mode_lower == "roll_tool" || mode_lower == "roll") {
+    if (mode_lower == "roll_tool" || mode_lower == "roll" || mode_lower == "end_effector") {
       mode_ = EndEffectorMode::kRollTool;
       return true;
     }
