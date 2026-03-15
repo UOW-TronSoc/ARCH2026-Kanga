@@ -36,7 +36,10 @@ ament_target_dependencies(control_node rclcpp sensor_msgs std_msgs geometry_msgs
 add_executable(joint_control_relay_node src/joint_control_relay.cpp)
 ament_target_dependencies(joint_control_relay_node rclcpp sensor_msgs)
 
-install(TARGETS control_node joint_control_relay_node DESTINATION lib/${PROJECT_NAME})
+add_executable(joint_desired_control_mux src/joint_desired_control_mux.cpp)
+ament_target_dependencies(joint_desired_control_mux rclcpp sensor_msgs std_msgs)
+
+install(TARGETS control_node joint_control_relay_node joint_desired_control_mux DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY include/
   DESTINATION include

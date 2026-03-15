@@ -358,27 +358,44 @@ private:
 		js.velocity.resize(dof);
 		js.effort.resize(dof);
 
-			// Push PD targets into Raisim's internal controller
+			// Integrate velocity to get position reference (avoids jumps when switching controllers).
 			Eigen::VectorXd q_ref_local;
 			Eigen::VectorXd qd_ref_local;
 		{
 			std::lock_guard<std::mutex> lock(target_mutex_);
-				q_ref_local = q_ref;
 				qd_ref_local = qd_ref;
+				q_ref_local = q_ref;
 			}
 
-			// In velocity-command mode, when target velocity is near zero, hold current position
-			// in sim to avoid spring-back to an integrated reference.
-			const size_t q_dim = static_cast<size_t>(q_ref_local.size());
-			const size_t qd_dim = static_cast<size_t>(qd_ref_local.size());
-			const size_t gc_dim = static_cast<size_t>(gc.size());
-			const size_t common_dim = std::min({q_dim, qd_dim, gc_dim});
+			const size_t common_dim = std::min({
+				static_cast<size_t>(q_ref_local.size()),
+				static_cast<size_t>(qd_ref_local.size()),
+				static_cast<size_t>(gc.size())});
+
 			for (size_t i = 0; i < common_dim; ++i)
 			{
-				if (std::abs(qd_ref_local[static_cast<Eigen::Index>(i)]) <= stop_hold_velocity_epsilon_)
+				const auto idx = static_cast<Eigen::Index>(i);
+				if (std::abs(qd_ref_local[idx]) <= stop_hold_velocity_epsilon_)
 				{
-					q_ref_local[static_cast<Eigen::Index>(i)] = gc[static_cast<Eigen::Index>(i)];
+					q_ref_local[idx] = gc[idx];
 				}
+				else
+				{
+					q_ref_local[idx] += qd_ref_local[idx] * dt_;
+				}
+			}
+
+			// Clamp to joint limits
+			const auto limits = robot->getJointLimits();
+			for (size_t i = 0; i < common_dim && i < limits.size(); ++i)
+			{
+				const auto idx = static_cast<Eigen::Index>(i);
+				q_ref_local[idx] = std::clamp(q_ref_local[idx], limits[i][0], limits[i][1]);
+			}
+
+		{
+			std::lock_guard<std::mutex> lock(target_mutex_);
+				q_ref = q_ref_local;
 			}
 			robot->setPdTarget(q_ref_local, qd_ref_local);
 
@@ -486,55 +503,29 @@ private:
 		}
 
 		/*
-		 * Callback function to handle incoming joint effort commands
-		 * This function is triggered when a new message is received on the "joint_desired_control" topic
-		 * It saves the control reference commands to memory for the next simulation step
-		 *
-		 * @param msg The incoming message containing joint positions, velocities, and efforts
+		 * Callback function to handle incoming joint effort commands.
+		 * Saves velocity commands only; position is integrated in the sim update loop
+		 * to avoid jumps when switching between joint and EE controllers.
 		 */
 		void effortCommandCallback(const sensor_msgs::msg::JointState::SharedPtr msg)
 		{
 			const size_t expected_dof = static_cast<size_t>(robot->getDOF());
-			if (msg->position.empty())
+			if (msg->velocity.empty())
 			{
 				RCLCPP_WARN_THROTTLE(
 					this->get_logger(), *this->get_clock(), 1000,
-					"Received empty effort command; expected up to %zu joints",
+					"Received joint_desired_control without velocity; expected up to %zu joints",
 					expected_dof);
 				return;
 			}
 
-			if (msg->position.size() < expected_dof)
-			{
-				RCLCPP_WARN_THROTTLE(
-					this->get_logger(), *this->get_clock(), 1000,
-					"Received partial effort command: %zu of %zu joints. Unspecified joints hold previous targets.",
-					msg->position.size(),
-					expected_dof);
-			}
-
-			const size_t command_dof = std::min(msg->position.size(), expected_dof);
+			const size_t command_dof = std::min(msg->velocity.size(), expected_dof);
 			std::lock_guard<std::mutex> lock(target_mutex_);
 
-			// Save desired positions
 			for (size_t i = 0; i < command_dof; ++i)
-			{
-				q_ref[i] = msg->position[i];
-			}
-
-			// Save desired velocities if provided; otherwise zero
-			if (msg->velocity.size() >= command_dof)
-			{
-				for (size_t i = 0; i < command_dof; ++i)
-					qd_ref[i] = msg->velocity[i];
-			}
-			else
-			{
-				for (size_t i = 0; i < command_dof; ++i)
-				{
-					qd_ref[i] = 0.0;
-				}
-			}
+				qd_ref[i] = msg->velocity[i];
+			for (size_t i = command_dof; i < expected_dof; ++i)
+				qd_ref[i] = 0.0;
 		}
 
 

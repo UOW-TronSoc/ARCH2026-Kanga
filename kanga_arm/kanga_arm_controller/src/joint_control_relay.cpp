@@ -231,15 +231,10 @@ private:
       filtered_velocity_[i] = std::clamp(
         filtered_velocity_[i], -joint_max_velocity_direct_[i], joint_max_velocity_direct_[i]);
       velocity[i] = filtered_velocity_[i];
+      // Anti-windup: use measured position (feedback); position integration happens in sim.
       const double measured_position_limit_frame = have_feedback_
         ? feedback_position_[i]
         : (joint_velocity_invert_[i] ? -current_position_[i] : current_position_[i]);
-      current_position_[i] += velocity[i] * dt;
-
-      // Keep desired position inside configured hard limits.
-      current_position_[i] = std::clamp(current_position_[i], joint_min_limits_[i], joint_max_limits_[i]);
-
-      // Evaluate anti-windup in joint-limit frame (before velocity sign inversion).
       const double velocity_limit_frame = joint_velocity_invert_[i] ? -velocity[i] : velocity[i];
       if ((measured_position_limit_frame <= joint_min_limits_[i] && velocity_limit_frame < 0.0) ||
           (measured_position_limit_frame >= joint_max_limits_[i] && velocity_limit_frame > 0.0)) {
@@ -255,7 +250,8 @@ private:
     out_msg.effort.resize(controlled_dof, 0.0);
 
     for (size_t i = 0; i < controlled_dof; ++i) {
-      out_msg.position[i] = current_position_[i];
+      // Publish measured position (sim integrates velocity internally; avoids jumps when switching).
+      out_msg.position[i] = have_feedback_ ? feedback_position_[i] : current_position_[i];
       out_msg.velocity[i] = velocity[i];
     }
 

@@ -541,18 +541,14 @@ private:
 				cmd_vel = -cmd_vel;
 			}
 
-			desired_joint_position_(idx) += cmd_vel * dt;
-			desired_joint_position_(idx) = std::clamp(
-				desired_joint_position_(idx), joint_min_limits_[i], joint_max_limits_[i]);
-
-			// If saturated, don't continue commanding into the limit.
-			if ((desired_joint_position_(idx) <= joint_min_limits_[i] && cmd_vel < 0.0) ||
-				(desired_joint_position_(idx) >= joint_max_limits_[i] && cmd_vel > 0.0))
+			// Anti-windup: use measured position; sim integrates velocity internally (avoids jumps when switching).
+			if ((joint_position(idx) <= joint_min_limits_[i] && cmd_vel < 0.0) ||
+				(joint_position(idx) >= joint_max_limits_[i] && cmd_vel > 0.0))
 			{
 				cmd_vel = 0.0;
 			}
 
-			control_effort.position[i] = desired_joint_position_(idx);
+			control_effort.position[i] = joint_position(idx);
 			control_effort.velocity[i] = cmd_vel;
 			control_effort.effort[i] = 0.0;
 		}
