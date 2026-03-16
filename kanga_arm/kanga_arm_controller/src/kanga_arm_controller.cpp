@@ -71,6 +71,7 @@ public:
 		// Initialize tracked joint state vectors.
 		init_pos = Eigen::VectorXd::Zero(dof);
 		reference_world_velocity_ = Eigen::VectorXd::Zero(6);
+		reference_ee_task_velocity_ = Eigen::Vector3d::Zero();
 		joint_position = Eigen::VectorXd::Zero(dof);
 		joint_velocity = Eigen::VectorXd::Zero(dof);
 		desired_joint_position_ = Eigen::VectorXd::Zero(dof);
@@ -453,26 +454,41 @@ private:
 			// j1 bypasses kinematics: use direct value from joint_control (joy axis -1..1).
 			const double j1_max = joint_max_velocity_direct_[0];
 			double j1_vel = 0.0;
+			Eigen::Vector3d ee_task_vel;
 			{
 				std::lock_guard<std::mutex> lock(j1_direct_mutex_);
 				j1_vel = direct_j1_velocity_;
 			}
+			{
+				std::lock_guard<std::mutex> lock(command_mutex_);
+				ee_task_vel = reference_ee_task_velocity_;
+			}
 			j1_vel *= j1_max;  // scale to rad/s
 			joint_velocity_cmd(0) = std::clamp(j1_vel, -j1_max, j1_max);
 
-			// Solve [x, z, pitch] against j2, j3, j4 only (3x3).
+			// Use body-frame Jacobian so pitch is rotation about EE Y at all orientations.
+			// World-frame omega.y fails at intermediate tilts: EE Y != world Y, so constraining
+			// only omega_world.y produces wrong rotation axis. Body frame fixes this.
 			const size_t chain_dof = 3;
 			if (jacobian.cols() >= 4)
 			{
+				const Eigen::Isometry3d ee_tf = kinematics_.forwardTransform(joint_position);
+				const Eigen::Matrix3d R = ee_tf.rotation();
+				// J_body: twist in EE frame. J_body = [R^T * J_linear; R^T * J_angular]
+				Eigen::MatrixXd j_body(6, jacobian.cols());
+				j_body.topRows<3>() = R.transpose() * jacobian.topRows<3>();
+				j_body.bottomRows<3>() = R.transpose() * jacobian.bottomRows<3>();
+
+				// Task: [EE x, EE z, EE pitch] = rows 0, 2, 4 of body Jacobian
 				Eigen::MatrixXd task_jacobian(3, chain_dof);
-				task_jacobian.block(0, 0, 1, chain_dof) = jacobian.block(0, 1, 1, chain_dof);  // x
-				task_jacobian.block(1, 0, 1, chain_dof) = jacobian.block(2, 1, 1, chain_dof);  // z
-				task_jacobian.block(2, 0, 1, chain_dof) = jacobian.block(4, 1, 1, chain_dof);  // pitch
+				task_jacobian.row(0) = j_body.block(0, 1, 1, chain_dof);  // EE x vel
+				task_jacobian.row(1) = j_body.block(2, 1, 1, chain_dof);  // EE z vel
+				task_jacobian.row(2) = j_body.block(4, 1, 1, chain_dof);  // EE omega.y (pitch)
 
 				Eigen::VectorXd task_velocity(3);
-				task_velocity(0) = reference_world_velocity(0); // x
-				task_velocity(1) = reference_world_velocity(2);  // z (y excluded)
-				task_velocity(2) = reference_world_velocity(4); // pitch
+				task_velocity(0) = ee_task_vel(0);  // v_ee.x
+				task_velocity(1) = ee_task_vel(1);  // v_ee.z
+				task_velocity(2) = ee_task_vel(2);  // pitch (omega_ee.y)
 
 				const Eigen::MatrixXd task_jacobian_pinv = pseudoInverse(task_jacobian, 1e-4);
 				const Eigen::VectorXd chain_velocity_cmd = task_jacobian_pinv * task_velocity;
@@ -664,10 +680,11 @@ private:
 	}
 
 	/**
-	 * @brief Stores desired end-effector-frame velocity, transforms to world frame.
+	 * @brief Stores desired end-effector-frame velocity.
 	 *
-	 * Uses current end-effector orientation from forward kinematics to rotate
-	 * the twist into world frame before caching.
+	 * For IK: stores [v_ee.x, v_ee.z, pitch] in reference_ee_task_velocity_ (body-frame
+	 * formulation fixes pitch axis at intermediate orientations). Also stores world-frame
+	 * velocity for desired_world_position_ integration; roll for j5.
 	 */
 	void eeVelocityCallback(const geometry_msgs::msg::Twist::SharedPtr msg)
 	{
@@ -676,10 +693,6 @@ private:
 
 		Eigen::Vector3d v_ee(msg->linear.x, msg->linear.y, msg->linear.z);
 		Eigen::Vector3d v_world = R * v_ee;
-		// Transform only pitch and yaw; roll goes directly to j5 and must not affect pitch/yaw.
-		// Otherwise when j1 is rotated, R*(roll,0,0) has non-zero y,z and incorrectly commands j2-j4.
-		Eigen::Vector3d omega_ee_pitch_yaw(0.0, msg->angular.y, msg->angular.z);
-		Eigen::Vector3d omega_world_pitch_yaw = R * omega_ee_pitch_yaw;
 
 		const auto clamp_world = [this](size_t idx, double value) -> double
 		{
@@ -688,10 +701,14 @@ private:
 		};
 
 		std::lock_guard<std::mutex> lock(command_mutex_);
+		// EE-frame task for body Jacobian: [v_ee.x, v_ee.z, pitch]
+		reference_ee_task_velocity_(0) = clamp_world(0, v_ee.x());
+		reference_ee_task_velocity_(1) = clamp_world(2, v_ee.z());
+		reference_ee_task_velocity_(2) = clamp_world(4, msg->angular.y);
+
 		reference_world_velocity_(0) = clamp_world(0, v_world.x());
 		reference_world_velocity_(1) = clamp_world(1, v_world.y());
 		reference_world_velocity_(2) = clamp_world(2, v_world.z());
-		// Roll (j5) bypasses kinematics: pass directly to joint, no frame transform.
 		if (has_roll_joint_)
 		{
 			reference_world_velocity_(3) = clamp_world(3, msg->angular.x);
@@ -700,8 +717,8 @@ private:
 		{
 			reference_world_velocity_(3) = 0.0;
 		}
-		reference_world_velocity_(4) = clamp_world(4, omega_world_pitch_yaw.y());
-		reference_world_velocity_(5) = clamp_world(5, omega_world_pitch_yaw.z());
+		reference_world_velocity_(4) = clamp_world(4, msg->angular.y);
+		reference_world_velocity_(5) = clamp_world(5, msg->angular.z);
 		last_velocity_time_ = steady_clock_.now();
 	}
 
@@ -750,6 +767,7 @@ private:
 
 	// Cached desired command from kanga_arm/world_state_control.
 	Eigen::VectorXd reference_world_velocity_; // Reference world velocity [m/s, rad/s], size 6.
+	Eigen::Vector3d reference_ee_task_velocity_; // EE mode: [v_ee.x, v_ee.z, pitch] for body Jacobian.
 	rclcpp::Clock steady_clock_{RCL_STEADY_TIME};
 	rclcpp::Time last_velocity_time_;
 	std::mutex command_mutex_;
