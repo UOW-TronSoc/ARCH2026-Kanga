@@ -210,8 +210,8 @@
       <origin xyz="0.449997 1.12725e-06 -0.0395" rpy="3.14159 0 0"/>
       <parent link="${prefix}link2"/>
       <child link="${prefix}link3"/>
-      <axis xyz="0 0 1"/>
-      <limit effort="10" velocity="10" lower="-1.309" upper="2.26893"/>
+      <axis xyz="0 0 -1"/>
+      <limit effort="10" velocity="10" lower="-2.26893" upper="1.309"/>
     </joint>
 
     <joint name="${prefix}arm_j2" type="revolute">
@@ -226,7 +226,7 @@
       <origin xyz="-0.06 0.235 0.011" rpy="3.14159 0 1.5708"/>
       <parent link="${prefix}baserotation"/>
       <child link="${prefix}link1"/>
-      <axis xyz="0 0 1"/>
+      <axis xyz="0 0 -1"/>
       <limit effort="10" velocity="10" lower="-1.5708" upper="1.5708"/>
     </joint>
   </xacro:macro>

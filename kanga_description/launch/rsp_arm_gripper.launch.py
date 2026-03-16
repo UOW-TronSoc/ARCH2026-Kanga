@@ -30,7 +30,7 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             "use_joint_state_publisher",
-            default_value="true",
+            default_value="false",
             description="Run joint_state_publisher(_gui). Keep false when another node publishes /joint_states.",
         ),
         Node(
