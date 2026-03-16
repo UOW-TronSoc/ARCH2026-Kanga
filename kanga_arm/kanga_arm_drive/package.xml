@@ -13,6 +13,7 @@
   <depend>can_msgs</depend>
   <depend>rclcpp</depend>
   <depend>sensor_msgs</depend>
+  <depend>kanga_arm_description</depend>
   <depend>kanga_interfaces</depend>
   <depend>kanga_odrive</depend>
 

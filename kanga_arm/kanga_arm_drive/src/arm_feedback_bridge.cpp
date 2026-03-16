@@ -236,6 +236,14 @@ public:
         }));
     }
 
+    joint_initial_positions_ = this->declare_parameter<std::vector<double>>(
+      "joint_initial_positions", std::vector<double>{0.0, 0.0, 0.0, 0.0, 0.0});
+    if (joint_initial_positions_.size() < axes_.size()) {
+      joint_initial_positions_.resize(axes_.size(), 0.0);
+    } else if (joint_initial_positions_.size() > axes_.size()) {
+      joint_initial_positions_.resize(axes_.size());
+    }
+
     const double safe_rate_hz = publish_rate_hz > 0.0 ? publish_rate_hz : 250.0;
     timer_ = this->create_wall_timer(
       std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -293,12 +301,14 @@ private:
     size_t unseen_count = 0;
     {
       std::lock_guard<std::mutex> lock(mutex_);
-      for (const auto & axis : axes_) {
+      for (size_t i = 0; i < axes_.size(); ++i) {
+        const auto & axis = axes_[i];
         if (!axis.seen) {
           ++unseen_count;
         }
         msg.name.push_back(axis.name);
-        msg.position.push_back(axis.position);
+        const double offset = (i < joint_initial_positions_.size()) ? joint_initial_positions_[i] : 0.0;
+        msg.position.push_back(static_cast<double>(axis.position) + offset);
         msg.velocity.push_back(axis.velocity);
         msg.effort.push_back(axis.effort);
       }
@@ -316,6 +326,7 @@ private:
 
   std::mutex mutex_;
   std::string frame_id_;
+  std::vector<double> joint_initial_positions_;
   std::vector<AxisData> axes_;
   std::vector<rclcpp::Subscription<kanga_interfaces::msg::ControllerStatus>::SharedPtr> subs_;
   rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_state_pub_;

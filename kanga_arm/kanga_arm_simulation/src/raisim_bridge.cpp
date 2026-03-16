@@ -61,15 +61,16 @@ public:
 				scoop_tool_tf_ = dhTransform(0.0, scoop_tool_d, 0.0, 0.0);
 			}
 
-		// Setup initial joint positions
-		this->declare_parameter<std::vector<double>>("joint_initial_positions", std::vector<double>{});
+		// Setup initial joint positions from kanga_arm_config (joint_initial_positions)
+		this->declare_parameter<std::vector<double>>("joint_initial_positions", std::vector<double>{0.0, 0.0, 0.0, 0.0, 0.0});
 		std::vector<double> joint_initial_positions;
 		this->get_parameter("joint_initial_positions", joint_initial_positions);
+		if (joint_initial_positions.empty()) {
+			RCLCPP_WARN(this->get_logger(), "joint_initial_positions empty; using default [0,0,0,0,0]");
+			joint_initial_positions = {0.0, 0.0, 0.0, 0.0, 0.0};
+		}
 		Eigen::VectorXd joint_pos = Eigen::Map<Eigen::VectorXd>(joint_initial_positions.data(), joint_initial_positions.size());
-		const int N_joints = joint_pos.size();
-
-		// Only joint positions are needed for a fixed-base arm
-		init_state = joint_pos;
+		const int N_joints = static_cast<int>(joint_pos.size());
 
 		// Set world timestep for simulation
 		dt_ = pd_time_step_ms * 1e-3; // seconds
@@ -128,6 +129,25 @@ public:
 		gc = Eigen::VectorXd::Zero(robot->getGeneralizedCoordinateDim());
 		gv = Eigen::VectorXd::Zero(robot->getDOF());
 		gf = Eigen::VectorXd::Zero(robot->getDOF());
+
+		// Build init_state from joint_initial_positions to match robot gc format.
+		// Fixed-base arm: gc = [base_pos(3), base_quat(4), joint_positions(dof)] or just joint_positions.
+		const int gc_dim = static_cast<int>(robot->getGeneralizedCoordinateDim());
+		const int dof = robot->getDOF();
+		init_state = Eigen::VectorXd::Zero(gc_dim);
+		if (gc_dim == N_joints) {
+			init_state = joint_pos;
+		} else if (gc_dim >= 7 + dof) {
+			// Base at z=2 from URDF world_to_baserotation origin
+			init_state[0] = 0.0; init_state[1] = 0.0; init_state[2] = 2.0;
+			init_state[3] = 1.0; init_state[4] = 0.0; init_state[5] = 0.0; init_state[6] = 0.0;
+			const int joint_start = gc_dim - dof;
+			for (int i = 0; i < std::min(N_joints, dof); ++i)
+				init_state[joint_start + i] = (i < joint_pos.size()) ? joint_pos(i) : 0.0;
+		} else {
+			for (int i = 0; i < std::min(N_joints, gc_dim); ++i)
+				init_state(i) = joint_pos(i);
+		}
 
 		// Joint names used for ROS JointState publishing.
 		const auto joint_names_param = this->declare_parameter<std::vector<std::string>>(
@@ -219,8 +239,8 @@ public:
 
 		RCLCPP_INFO(this->get_logger(), "PD gains configured (kp size=%ld, kd size=%ld)", kp_.size(), kd_.size());
 
-		q_ref = joint_pos;
-		qd_ref = Eigen::VectorXd::Zero(N_joints);
+		q_ref = init_state;
+		qd_ref = Eigen::VectorXd::Zero(dof);
 
 		// Set siulation position and velocity
 		robot->setGeneralizedCoordinate(init_state);

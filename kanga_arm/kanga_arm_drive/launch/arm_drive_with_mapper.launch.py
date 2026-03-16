@@ -1,6 +1,14 @@
 import os
 
 from ament_index_python.packages import get_package_share_directory
+
+def get_kanga_arm_config_path():
+    try:
+        return os.path.join(
+            get_package_share_directory("kanga_arm_description"),
+            "config", "kanga_arm_config.yaml")
+    except Exception:
+        return None
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.conditions import IfCondition
@@ -26,11 +34,14 @@ def generate_launch_description() -> LaunchDescription:
         output="screen",
     )
 
+    kanga_arm_config = get_kanga_arm_config_path()
+    arm_feedback_bridge_params = [kanga_arm_config] if kanga_arm_config else []
     arm_feedback_bridge_node = Node(
         package="kanga_arm_drive",
         executable="arm_feedback_bridge",
         name="arm_feedback_bridge",
         output="screen",
+        parameters=arm_feedback_bridge_params,
     )
 
     arm_end_effector_mapper_node = Node(
