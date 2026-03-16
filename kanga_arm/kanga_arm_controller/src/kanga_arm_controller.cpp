@@ -452,12 +452,17 @@ private:
 		if (use_direct_j1)
 		{
 			// j1 bypasses kinematics: use direct value from joint_control (joy axis -1..1).
+			// EE mode J1 watchdog: zero J1 when joint_control stream is stale.
 			const double j1_max = joint_max_velocity_direct_[0];
 			double j1_vel = 0.0;
 			Eigen::Vector3d ee_task_vel;
 			{
 				std::lock_guard<std::mutex> lock(j1_direct_mutex_);
-				j1_vel = direct_j1_velocity_;
+				const double j1_stale_s = (steady_clock_.now() - last_j1_direct_time_).seconds();
+				if (j1_stale_s <= command_stale_timeout_s_)
+				{
+					j1_vel = direct_j1_velocity_;
+				}
 			}
 			{
 				std::lock_guard<std::mutex> lock(command_mutex_);

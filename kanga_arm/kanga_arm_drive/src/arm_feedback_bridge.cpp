@@ -317,8 +317,9 @@ private:
     if (unseen_count > 0) {
       RCLCPP_WARN_THROTTLE(
         this->get_logger(), *this->get_clock(), 2000,
-        "Waiting for controller_status from %zu/%zu axes",
+        "Waiting for controller_status from %zu/%zu axes; withholding joint_states",
         unseen_count, axes_.size());
+      return;
     }
 
     joint_state_pub_->publish(msg);

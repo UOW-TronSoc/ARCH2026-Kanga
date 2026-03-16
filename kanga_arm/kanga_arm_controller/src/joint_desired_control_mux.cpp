@@ -73,11 +73,23 @@ private:
     const bool was_joint = use_joint_mode_;
     use_joint_mode_ = msg->data;
     if (was_joint != use_joint_mode_) {
+      publish_zero_hold();
       RCLCPP_INFO(
         this->get_logger(),
         "Mode switched to: %s",
         use_joint_mode_ ? "joint" : "ee");
     }
+  }
+
+  void publish_zero_hold()
+  {
+    sensor_msgs::msg::JointState zero_msg;
+    zero_msg.header.stamp = this->get_clock()->now();
+    zero_msg.name = {"arm_j1", "arm_j2", "arm_j3", "arm_j4", "arm_j5"};
+    zero_msg.position.resize(5, 0.0);
+    zero_msg.velocity.resize(5, 0.0);
+    zero_msg.effort.resize(5, 0.0);
+    output_pub_->publish(zero_msg);
   }
 
   rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr joint_sub_;

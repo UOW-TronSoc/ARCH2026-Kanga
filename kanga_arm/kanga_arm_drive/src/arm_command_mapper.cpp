@@ -268,6 +268,8 @@ public:
     }
 
     max_joint_velocity_ = this->declare_parameter<double>("max_joint_velocity", 10.0);
+    command_stale_timeout_s_ = this->declare_parameter<double>("command_stale_timeout_s", 0.5);
+    hold_position_on_stale_ = this->declare_parameter<bool>("hold_position_on_stale", true);
 
     controlled_joint_names_ = this->declare_parameter<std::vector<std::string>>(
       "controlled_joint_names", std::vector<std::string>{"arm_j1", "arm_j2", "arm_j3", "arm_j4"});
@@ -311,6 +313,10 @@ public:
     joint_state_sub_ = this->create_subscription<sensor_msgs::msg::JointState>(
       "joint_desired_control", 10,
       std::bind(&ArmCommandMapper::joint_state_callback, this, std::placeholders::_1));
+
+    watchdog_timer_ = this->create_wall_timer(
+      std::chrono::milliseconds(20),
+      std::bind(&ArmCommandMapper::watchdog_timer_callback, this));
 
     RCLCPP_INFO(this->get_logger(), "arm_command_mapper active");
   }
@@ -519,6 +525,45 @@ private:
   }
 
   /**
+   * @brief Publish zero-velocity commands to all configured axes.
+   */
+  void publish_zero_velocity_commands()
+  {
+    if (!all_axes_ready()) {
+      return;
+    }
+    kanga_interfaces::msg::ControlMessage ctrl;
+    ctrl.control_mode = 2;
+    ctrl.input_mode = 2;
+    ctrl.input_pos = 0.0F;
+    ctrl.input_torque = 0.0F;
+    ctrl.input_vel = 0.0F;
+    for (auto & pub : ctrl_publishers_) {
+      pub->publish(ctrl);
+    }
+  }
+
+  /**
+   * @brief Watchdog timer: publish zero velocity when command stream is stale.
+   */
+  void watchdog_timer_callback()
+  {
+    const double stale_s = (steady_clock_.now() - last_command_time_).seconds();
+    if (stale_s > command_stale_timeout_s_ && hold_position_on_stale_) {
+      if (!command_stale_logged_) {
+        RCLCPP_WARN(
+          this->get_logger(),
+          "Command watchdog: joint_desired_control stale for %.3f s (timeout=%.3f s). Publishing zero velocity.",
+          stale_s, command_stale_timeout_s_);
+        command_stale_logged_ = true;
+      }
+      publish_zero_velocity_commands();
+    } else {
+      command_stale_logged_ = false;
+    }
+  }
+
+  /**
    * @brief Convert desired joint velocities into ODrive velocity control commands.
    * Inputs:
    * - msg: JointState command message from joint_desired_control.
@@ -528,6 +573,8 @@ private:
   void joint_state_callback(const sensor_msgs::msg::JointState::SharedPtr msg)
   {
     constexpr size_t kControlledDofs = 4U;
+
+    last_command_time_ = steady_clock_.now();
 
     if (!all_axes_ready()) {
       if (!waiting_to_publish_logged_) {
@@ -577,16 +624,13 @@ private:
       const float sign = invert_flags_[i] ? -1.0F : 1.0F;
       const float motor_vel = reduction * limited_joint_vel;
       ctrl.input_vel = sign * motor_vel;
-      RCLCPP_INFO_THROTTLE(
-        this->get_logger(), *this->get_clock(), 500,
-        "Publishing ODrive command axis=%s joint=%s joint_vel=%.5f rad/s motor_input_vel=%.5f rad/s (raw_joint_vel=%.5f rad/s, reduction=%.3f, joint_vel_limit=%.5f rad/s)",
+      RCLCPP_DEBUG_THROTTLE(
+        this->get_logger(), *this->get_clock(), 5000,
+        "Publishing ODrive command axis=%s joint=%s joint_vel=%.5f rad/s motor_input_vel=%.5f rad/s",
         axis_names_[i].c_str(),
         controlled_joint_names_[i].c_str(),
         limited_joint_vel,
-        ctrl.input_vel,
-        joint_vel,
-        reduction,
-        max_joint_vel);
+        ctrl.input_vel);
       ctrl_publishers_[i]->publish(ctrl);
     }
   }
@@ -720,12 +764,18 @@ private:
   std::vector<std::string> axis_names_;
   std::vector<std::string> controlled_joint_names_;
   double max_joint_velocity_{10.0};
+  double command_stale_timeout_s_{0.5};
+  bool hold_position_on_stale_{true};
+  rclcpp::Clock steady_clock_{RCL_STEADY_TIME};
+  rclcpp::Time last_command_time_{0, 0, RCL_STEADY_TIME};
+  bool command_stale_logged_{false};
 
   std::vector<rclcpp::Client<AxisState>::SharedPtr> axis_state_clients_;
   std::vector<std::string> axis_state_service_names_;
   std::vector<bool> axis_state_ready_;
   std::vector<bool> axis_state_request_sent_;
   rclcpp::TimerBase::SharedPtr axis_state_timer_;
+  rclcpp::TimerBase::SharedPtr watchdog_timer_;
   uint32_t requested_axis_state_{};
   bool waiting_to_publish_logged_{false};
   bool shutdown_hook_registered_{false};

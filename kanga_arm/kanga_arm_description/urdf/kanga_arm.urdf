@@ -190,28 +190,28 @@
     <parent link="link3"/>
     <child link="link4"/>
     <axis xyz="0 0 1"/>
-    <limit effort="10" lower="-3.66519" upper="0.785398163" velocity="10"/>
+    <limit effort="10" lower="-31.4159" upper="31.4159" velocity="10"/>
   </joint>
   <joint name="arm_j3" type="revolute">
     <origin rpy="3.14159 0 0" xyz="0.449997 1.12725e-06 -0.0395"/>
     <parent link="link2"/>
     <child link="link3"/>
     <axis xyz="0 0 1"/>
-    <limit effort="10" lower="-1.309" upper="2.26893" velocity="10"/>
+    <limit effort="10" lower="-31.4159" upper="31.4159" velocity="10"/>
   </joint>
   <joint name="arm_j2" type="revolute">
     <origin rpy="-6.08527e-06 1.5708 0" xyz="0.0855 5.2029e-07 -0.079"/>
     <parent link="link1"/>
     <child link="link2"/>
     <axis xyz="0 0 1"/>
-    <limit effort="10" lower="-1.5708" upper="2.44346" velocity="10"/>
+    <limit effort="10" lower="-31.4159" upper="31.4159" velocity="10"/>
   </joint>
   <joint name="arm_j1" type="revolute">
     <origin rpy="3.14159 0 1.5708" xyz="-0.06 0.235 0.011"/>
     <parent link="baserotation"/>
     <child link="link1"/>
     <axis xyz="0 0 1"/>
-    <limit effort="10" lower="-1.5708" upper="1.5708" velocity="10"/>
+    <limit effort="10" lower="-31.4159" upper="31.4159" velocity="10"/>
   </joint>
   <joint name="arm_gripper_payload_mount_joint" type="fixed">
     <origin rpy="0 0 0" xyz="0 0 0"/>
@@ -309,6 +309,6 @@
     <parent link="l4"/>
     <child link="l5"/>
     <axis xyz="0 0 1"/>
-    <limit effort="10" lower="-3.14159" upper="3.14159" velocity="10"/>
+    <limit effort="10" lower="-31.4159" upper="31.4159" velocity="10"/>
   </joint>
 </robot>

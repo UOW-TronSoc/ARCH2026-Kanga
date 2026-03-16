@@ -5,9 +5,9 @@
     joint_initial_positions: [0.0, -1.5708, -1.3092, -1.5708, 0.0]
     # Example alternative: [0.0, -1.5708, 2.88, 0.0, 0.0]  # bent elbow pose
     link_lengths: [0.084, 0.45, 0.39, 0.105, 0.21657356] # 26.5
-    # Joint limits [rad] from kanga_arm.urdf for [arm_j1, arm_j2, arm_j3, arm_j4, arm_j5]
+    # Joint limits [rad] for [arm_j1, arm_j2, arm_j3, arm_j4, arm_j5]. J1: -90 to +135 deg.
     joint_min_limits: [-1.5708, -1.5708, -2.26893, -3.66519, -3.14159]
-    joint_max_limits: [1.5708, 2.44346, 1.309, 0.785398163, 3.14159]
+    joint_max_limits: [2.35619, 2.44346, 1.309, 0.785398163, 3.14159]
     joint_velocity_invert: [true, false, true, false, false]
     # Max commanded joint velocity [rad/s] per joint [arm_j1..arm_j5]
     # joint_max_velocity: fallback when direct/kinematics not set

@@ -186,7 +186,7 @@ private:
     joint_msg.velocity[0] = joint_velocity_scale_ * readAxis(joy_msg, joint_axis_indices_[0]);
     joint_msg.velocity[1] = joint_velocity_scale_ * readAxis(joy_msg, joint_axis_indices_[1]);
     joint_msg.velocity[2] = joint_velocity_scale_ * readAxis(joy_msg, joint_axis_indices_[2]);
-    joint_msg.velocity[3] = joint_velocity_scale_ * readAxis(joy_msg, joint_axis_indices_[3]);
+    joint_msg.velocity[3] = -joint_velocity_scale_ * readAxis(joy_msg, joint_axis_indices_[3]);
 
     const double j5_negative = readButton(joy_msg, button_negative_roll_index_);
     const double j5_positive = readButton(joy_msg, button_positive_roll_index_);
@@ -221,7 +221,7 @@ private:
     twist_msg.linear.x = -linear_scale_ * readAxis(joy_msg, ee_axis_indices_[0]);
     twist_msg.linear.y = 0.0;  // j1 bypasses kinematics
     twist_msg.linear.z = linear_scale_ * readAxis(joy_msg, ee_axis_indices_[2]);
-    twist_msg.angular.y = pitch_scale_ * readAxis(joy_msg, ee_axis_indices_[3]);
+    twist_msg.angular.y = -pitch_scale_ * readAxis(joy_msg, ee_axis_indices_[3]);
     const double roll_negative = readButton(joy_msg, button_negative_roll_index_);
     const double roll_positive = readButton(joy_msg, button_positive_roll_index_);
     twist_msg.angular.x = -roll_scale_ * (roll_positive - roll_negative);
