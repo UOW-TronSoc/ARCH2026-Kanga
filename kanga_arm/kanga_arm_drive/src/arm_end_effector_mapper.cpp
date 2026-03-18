@@ -74,7 +74,7 @@ private:
   {
     const double full_scale = std::max(std::abs(j5_scale_to_255_), 1.0e-6);
     const double normalized = std::clamp(std::abs(j5_value) / full_scale, 0.0, 1.0);
-    const auto magnitude = static_cast<uint8_t>(std::lround(normalized * 255.0));
+    const auto magnitude = static_cast<uint8_t>(std::lround(normalized * 100.0));
     uint8_t direction = 0U;
     if (magnitude > 0U) {
       direction = static_cast<uint8_t>((j5_value < 0.0) ? 0 : 1);

@@ -20,6 +20,7 @@ from ament_index_python.packages import get_package_share_directory
 def generate_launch_description() -> LaunchDescription:
     use_sim = LaunchConfiguration("use_sim")
     enable_drive = LaunchConfiguration("enable_drive")
+    enable_joy = LaunchConfiguration("enable_joy")
     tool_mode = LaunchConfiguration("tool_mode")
 
     robot_description_path = get_package_share_directory("kanga_arm_description")
@@ -93,6 +94,7 @@ def generate_launch_description() -> LaunchDescription:
         PythonLaunchDescriptionSource(
             os.path.join(joy_control_path, "launch", "joy_arm_hybrid_control.launch.py")
         ),
+        condition=IfCondition(enable_joy),
     )
 
     # Simulation when only sim is enabled
@@ -164,6 +166,11 @@ def generate_launch_description() -> LaunchDescription:
             "enable_drive",
             default_value="true",
             description="If true: run hardware arm drive stack.",
+        ),
+        DeclareLaunchArgument(
+            "enable_joy",
+            default_value="true",
+            description="If true: run hybrid joystick control stack.",
         ),
         DeclareLaunchArgument(
             "tool_mode",

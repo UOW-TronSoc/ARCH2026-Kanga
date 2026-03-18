@@ -19,17 +19,17 @@ def generate_launch_description() -> LaunchDescription:
         name='joy_to_hybrid_control',
         output='screen',
         parameters=[{
-            'mode_toggle_button': 0,
+            'mode_toggle_button': 1,
             'start_mode': 'joint',
             # Joint mode: axes -> j1, j2, j3, j4
-            'joint_axis_indices': [0, 1, 3, 2],
+            'joint_axis_indices': [0, 1, 5, 2],
             # EE mode: axes -> X, Z, pitch (end-effector frame)
-            'ee_axis_indices': [1, 0, 3, 2],
-            'axis_negative_j6': 4,
-            'axis_positive_j6': 5,
+            'ee_axis_indices': [1, 0, 5, 2],
+            'axis_negative_j6': 3,
+            'axis_positive_j6': 4,
             'j6_axis_pressed_threshold': 1.0,
-            'button_negative_roll': 9,
-            'button_positive_roll': 10,
+            'button_negative_roll': 4,
+            'button_positive_roll': 5,
             'joint_velocity_scale': 1.0,
             'linear_scale': 1.0,
             'pitch_scale': 1.0,
@@ -37,6 +37,10 @@ def generate_launch_description() -> LaunchDescription:
             'joint_control_topic': '/kanga_arm/joint_control',
             'ee_control_topic': 'kanga_arm/ee_state_control',
             'mode_topic': 'kanga_arm/control_mode_joint',
+            'start_mode': 'joint',
+            'j6_pwm_increment_speed': 30.0,
+            'j6_start_angle': 180.0,   # 0=closed, 180=open (or your convention)
+            
         }],
     )
 
