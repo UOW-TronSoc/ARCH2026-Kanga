@@ -1,16 +1,17 @@
 <?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>kanga_core</name>
   <version>0.0.1</version>
-  <description>Core microcontroller bridge configured for node id 0x15.</description>
+  <description>Core rover package: suspension joint state publisher and CAN bridge for ESP32 microcontroller.</description>
   <maintainer email="hunter.dejong03@gmail.com">Hunter</maintainer>
   <license>MIT</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
+  <build_depend>ament_cmake</build_depend>
 
   <depend>rclcpp</depend>
-  <depend>kanga_canbus</depend>
-  <depend>kanga_microcontroller</depend>
+  <depend>sensor_msgs</depend>
 
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>

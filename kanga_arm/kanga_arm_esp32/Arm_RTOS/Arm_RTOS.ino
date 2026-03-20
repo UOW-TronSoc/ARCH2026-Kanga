@@ -77,7 +77,7 @@ void setup() {
   ledcWrite(WRIST_IN2, 0);
 
   // EE Servo
-  EEServo.attach(EE_PWM, 1000, 2120);
+  EEServo.attach(EE_PWM, 1000, 2210);
   EEServo.write(180);
 
 

@@ -7,8 +7,9 @@ Panels:
         - /Global Options1
         - /Status1
         - /RobotModel1
+        - /TF1
       Splitter Ratio: 0.5
-    Tree Height: 364
+    Tree Height: 628
   - Class: rviz_common/Selection
     Name: Selection
   - Class: rviz_common/Tool Properties
@@ -95,68 +96,6 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
-        d435i_accel_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        d435i_accel_optical_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        d435i_bottom_screw_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        d435i_color_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        d435i_color_optical_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        d435i_depth_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        d435i_depth_optical_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        d435i_gyro_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        d435i_gyro_optical_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        d435i_infra1_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        d435i_infra1_optical_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        d435i_infra2_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        d435i_infra2_optical_frame:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-        d435i_link:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        diff_bar:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
         end_effector_mount:
           Alpha: 1
           Show Axes: false
@@ -169,7 +108,7 @@ Visualization Manager:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-        kanga_core:
+        kanga_core_simple:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -184,7 +123,7 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
-        left_suspension:
+        l5_cylinder_vis:
           Alpha: 1
           Show Axes: false
           Show Trail: false
@@ -209,15 +148,6 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
-        right_suspension:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
-          Value: true
-        rsd435i_mount:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
         top_payload_mount:
           Alpha: 1
           Show Axes: false
@@ -269,49 +199,19 @@ Visualization Manager:
           Value: true
         baserotation:
           Value: true
-        d435i_accel_frame:
-          Value: true
-        d435i_accel_optical_frame:
-          Value: true
-        d435i_bottom_screw_frame:
-          Value: true
-        d435i_color_frame:
-          Value: true
-        d435i_color_optical_frame:
-          Value: true
-        d435i_depth_frame:
-          Value: true
-        d435i_depth_optical_frame:
-          Value: true
-        d435i_gyro_frame:
-          Value: true
-        d435i_gyro_optical_frame:
-          Value: true
-        d435i_infra1_frame:
-          Value: true
-        d435i_infra1_optical_frame:
-          Value: true
-        d435i_infra2_frame:
-          Value: true
-        d435i_infra2_optical_frame:
-          Value: true
-        d435i_link:
-          Value: true
-        diff_bar:
-          Value: true
         end_effector_mount:
           Value: true
         front_payload_mount:
           Value: true
         gripper_endpoint:
           Value: true
-        kanga_core:
+        kanga_core_simple:
           Value: true
         l4:
           Value: true
         l5:
           Value: true
-        left_suspension:
+        l5_cylinder_vis:
           Value: true
         link1:
           Value: true
@@ -320,10 +220,6 @@ Visualization Manager:
         link3:
           Value: true
         link4:
-          Value: true
-        right_suspension:
-          Value: true
-        rsd435i_mount:
           Value: true
         top_payload_mount:
           Value: true
@@ -335,28 +231,28 @@ Visualization Manager:
           Value: true
         wheel_fr:
           Value: true
-      Marker Scale: 1
+        zed_camera_center:
+          Value: true
+        zed_camera_link:
+          Value: true
+        zed_left_camera_frame:
+          Value: true
+        zed_left_camera_optical_frame:
+          Value: true
+        zed_right_camera_frame:
+          Value: true
+        zed_right_camera_optical_frame:
+          Value: true
+      Marker Scale: 0.30000001192092896
       Name: TF
       Show Arrows: true
       Show Axes: true
       Show Names: false
       Tree:
         base_link:
-          kanga_core:
-            diff_bar:
-              {}
+          kanga_core_simple:
             front_payload_mount:
               {}
-            left_suspension:
-              wheel_bl:
-                {}
-              wheel_fl:
-                {}
-            right_suspension:
-              wheel_br:
-                {}
-              wheel_fr:
-                {}
             top_payload_mount:
               baserotation:
                 arm_dh_j1:
@@ -378,27 +274,16 @@ Visualization Manager:
                                 {}
                               gripper_endpoint:
                                 {}
-                            rsd435i_mount:
-                              d435i_bottom_screw_frame:
-                                d435i_link:
-                                  d435i_accel_frame:
-                                    d435i_accel_optical_frame:
-                                      {}
-                                  d435i_color_frame:
-                                    d435i_color_optical_frame:
-                                      {}
-                                  d435i_depth_frame:
-                                    d435i_depth_optical_frame:
-                                      {}
-                                  d435i_gyro_frame:
-                                    d435i_gyro_optical_frame:
-                                      {}
-                                  d435i_infra1_frame:
-                                    d435i_infra1_optical_frame:
-                                      {}
-                                  d435i_infra2_frame:
-                                    d435i_infra2_optical_frame:
-                                      {}
+                              l5_cylinder_vis:
+                                {}
+            wheel_bl:
+              {}
+            wheel_br:
+              {}
+            wheel_fl:
+              {}
+            wheel_fr:
+              {}
       Update Interval: 0
       Value: true
   Enabled: true
@@ -447,33 +332,33 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 2.3876068592071533
+      Distance: 1.996234655380249
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.16767658293247223
-        Y: -0.06107258051633835
-        Z: 0.4376380443572998
+        X: 0.04780557379126549
+        Y: -0.36082276701927185
+        Z: 0.5132517218589783
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.1703980267047882
+      Pitch: 0.2753979563713074
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.3153987228870392
+      Yaw: 0.9203982949256897
     Saved: ~
 Window Geometry:
   Displays:
     collapsed: false
-  Height: 1043
+  Height: 1536
   Hide Left Dock: false
   Hide Right Dock: false
-  QMainWindow State: 000000ff00000000fd000000010000000000000447000003b9fc0200000005fb000000100044006900730070006c006100790073010000003d000001f7000000c900fffffffb0000001200530065006c0065006300740069006f006e000000018a0000009f0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007300000001d0000000c10000005c00fffffffb0000000a00560069006500770073010000023a00000148000000a400fffffffb0000000800540069006d006501000003880000006e0000003900ffffff00000333000003b900000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd000000010000000000000447000005a6fc0200000005fb000000100044006900730070006c006100790073010000003d000002ff000000c900fffffffb0000001200530065006c0065006300740069006f006e000000018a0000009f0000005c00fffffffb0000001e0054006f006f006c002000500072006f007000650072007400690065007300000001d0000000c10000005c00fffffffb0000000a005600690065007700730100000342000001f3000000a400fffffffb0000000800540069006d0065010000053b000000a80000003900ffffff000005b3000005a600000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Selection:
     collapsed: false
   Time:
@@ -482,6 +367,6 @@ Window Geometry:
     collapsed: false
   Views:
     collapsed: false
-  Width: 1920
-  X: 2560
-  Y: 0
+  Width: 2560
+  X: 0
+  Y: 27

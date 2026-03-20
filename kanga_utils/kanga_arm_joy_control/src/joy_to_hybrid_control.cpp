@@ -36,7 +36,7 @@ public:
     j6_axis_pressed_threshold_ = this->declare_parameter<double>("j6_axis_pressed_threshold", 1.0);
     j6_min_angle_ = this->declare_parameter<double>("j6_min_angle", 0.0);
     j6_max_angle_ = this->declare_parameter<double>("j6_max_angle", 180.0);
-    j6_start_angle_ = this->declare_parameter<double>("j6_start_angle", 90.0);
+    j6_start_angle_ = this->declare_parameter<double>("j6_start_angle", 180.0);
     j6_pwm_increment_speed_ = this->declare_parameter<double>("j6_pwm_increment_speed", 30.0);
     button_negative_roll_index_ = this->declare_parameter<int64_t>("button_negative_roll", 10);
     button_positive_roll_index_ = this->declare_parameter<int64_t>("button_positive_roll", 9);
@@ -46,6 +46,7 @@ public:
     pitch_scale_ = this->declare_parameter<double>("pitch_scale", 1.0);
     roll_scale_ = this->declare_parameter<double>("roll_scale", 1.0);
     joint_velocity_scale_ = this->declare_parameter<double>("joint_velocity_scale", 1.0);
+    j5_velocity_scale_ = this->declare_parameter<double>("j5_velocity_scale", 1.0);
 
     ee_control_topic_ = this->declare_parameter<std::string>(
       "ee_control_topic", "kanga_arm/ee_state_control");
@@ -190,7 +191,7 @@ private:
 
     const double j5_negative = readButton(joy_msg, button_negative_roll_index_);
     const double j5_positive = readButton(joy_msg, button_positive_roll_index_);
-    joint_msg.velocity[4] = joint_velocity_scale_ * (j5_positive - j5_negative);
+    joint_msg.velocity[4] = j5_velocity_scale_ * (j5_positive - j5_negative);
 
     const bool j6_positive_pressed = readTriggerPressed(
       joy_msg, axis_positive_j6_index_, positive_trigger_initialized_);
@@ -234,7 +235,7 @@ private:
     joint_msg.velocity.resize(6, 0.0);
     joint_msg.position.resize(6, 0.0);
     joint_msg.velocity[0] = readAxis(joy_msg, joint_axis_indices_[0]);
-    joint_msg.velocity[4] = roll_positive - roll_negative;
+    joint_msg.velocity[4] = j5_velocity_scale_ * (roll_positive - roll_negative);
 
     const bool j6_positive_pressed = readTriggerPressed(
       joy_msg, axis_positive_j6_index_, positive_trigger_initialized_);
@@ -279,7 +280,7 @@ private:
   double j6_axis_pressed_threshold_{1.0};
   double j6_min_angle_{0.0};
   double j6_max_angle_{180.0};
-  double j6_start_angle_{90.0};
+  double j6_start_angle_{180.0};
   double j6_pwm_increment_speed_{30.0};
   double j6_position_{0.0};
   int64_t button_negative_roll_index_{10};
@@ -289,6 +290,7 @@ private:
   double pitch_scale_{1.0};
   double roll_scale_{1.0};
   double joint_velocity_scale_{1.0};
+  double j5_velocity_scale_{1.0};
   std::string ee_control_topic_;
   std::string joint_control_topic_;
   std::string mode_topic_;
