@@ -47,9 +47,9 @@ def generate_launch_description() -> LaunchDescription:
 
 
     )
-    actions.append(zed_launch)
+    # actions.append(zed_launch)
     # except PackageNotFoundError:
-    #     pass
+    #     pass  
 
     # Relay ZED rectified RGB compressed image to /camera/front
     zed_relay_node = Node(

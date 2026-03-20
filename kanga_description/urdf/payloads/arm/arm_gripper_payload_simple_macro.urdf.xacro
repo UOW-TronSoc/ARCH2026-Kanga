@@ -1,0 +1,167 @@
+<?xml version="1.0" ?>
+<robot name="arm_gripper_payload_simple_macro" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:include filename="$(find realsense2_description)/urdf/_d435i.urdf.xacro"/>
+
+  <!-- Reusable simplified arm gripper payload (with D435i camera, fixed arm_j5).
+       Params:
+       - parent: link this gripper mounts to
+       - xyz/rpy: payload pose relative to parent
+       - prefix: optional name prefix for multi-instance safety
+       - camera_name: base name for realsense camera links
+       - use_nominal_extrinsics: publish nominal camera optical/extrinsic frames -->
+  <xacro:macro name="arm_gripper_payload_simple" params="parent xyz:='0 0 0' rpy:='0 0 0' prefix:='' camera_name:='d435i' use_nominal_extrinsics:='true'">
+    <joint name="${prefix}arm_gripper_payload_simple_mount_joint" type="fixed">
+      <origin xyz="${xyz}" rpy="${rpy}"/>
+      <parent link="${parent}"/>
+      <child link="${prefix}l4"/>
+      <axis xyz="0 0 0"/>
+    </joint>
+
+    <link name="${prefix}l4">
+      <inertial>
+        <origin xyz="-0.0170215 0.0424528 0.0283404" rpy="0 0 0"/>
+        <mass value="0.8"/>
+        <inertia ixx="0.00298359" ixy="0.00100337" ixz="0.000141004" iyy="0.000967864" iyz="-0.000226967" izz="0.00343441"/>
+      </inertial>
+      <visual>
+        <origin xyz="-0.0334738 -0.125328 0.0674204" rpy="4.81e-08 -1.5708 0"/>
+        <geometry>
+          <mesh filename="package://kanga_description/meshes/payloads/arm_gripper_payload/l4.stl"/>
+        </geometry>
+        <material name="${prefix}l4_simple_material">
+          <color rgba="0.0862745 0.317647 0.690196 1"/>
+        </material>
+      </visual>
+      
+      <collision>
+        <origin xyz="-0.0334738 -0.125328 0.0674204" rpy="4.81e-08 -1.5708 0"/>
+        <geometry>
+          <mesh filename="package://kanga_description/meshes/payloads/arm_gripper_payload/l4.stl"/>
+        </geometry>
+      </collision>
+    </link>
+
+    <!-- Camera mount frame exported from CAD; D435i model is attached to this frame. -->
+    <link name="${prefix}rsd435i_mount">
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="1e-9"/>
+        <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+      </inertial>
+    </link>
+    <joint name="${prefix}rsd435i_mount_frame" type="fixed">
+      <origin xyz="-0.0660965 0.0953744 0.056" rpy="1.5708 0 -1.5708"/>
+      <parent link="${prefix}l4"/>
+      <child link="${prefix}rsd435i_mount"/>
+      <axis xyz="0 0 0"/>
+    </joint>
+    <xacro:sensor_d435i parent="${prefix}rsd435i_mount" name="${prefix}${camera_name}" use_nominal_extrinsics="${use_nominal_extrinsics}">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </xacro:sensor_d435i>
+
+    <link name="${prefix}l5">
+      <inertial>
+        <origin xyz="1.12104e-06 -0.00636427 -0.0838165" rpy="0 0 0"/>
+        <mass value="0.5"/>
+        <inertia ixx="0.0010927" ixy="6.88678e-07" ixz="6.65337e-07" iyy="0.0013298" iyz="-4.93335e-05" izz="0.000475952"/>
+      </inertial>
+      <!-- <visual>
+        <origin xyz="0.0384804 -0.0334738 -0.0953276" rpy="1.5708 0 0"/>
+        <geometry>
+          <mesh filename="package://kanga_description/meshes/payloads/arm_gripper_payload/l5.stl"/>
+        </geometry>
+        <material name="l5_simple_material">
+          <color rgba="0.368627 0.25098 0.643137 1"/>
+        </material>
+      </visual> -->
+      <!-- <collision>
+        <origin xyz="0.0384804 -0.0334738 -0.0953276" rpy="1.5708 0 0"/>
+        <geometry>
+          <mesh filename="package://kanga_description/meshes/payloads/arm_gripper_payload/l5.stl"/>
+        </geometry>
+      </collision> -->
+      <!-- <visual>
+        <origin xyz="0.0030445 -0.0021803 -0.22035" rpy="-1.5708 0 2.608e-09"/>
+        <geometry>
+          <mesh filename="package://kanga_description/meshes/payloads/arm_gripper_payload/fre_gripper__fixed.stl"/>
+        </geometry>
+        <material name="fre_gripper_simple_material">
+          <color rgba="0.596078 0.121569 0.67451 1"/>
+        </material>
+      </visual> -->
+      <!-- <collision>
+        <origin xyz="0.0030445 -0.0021803 -0.22035" rpy="-1.5708 0 2.608e-09"/>
+        <geometry>
+          <mesh filename="package://kanga_description/meshes/payloads/arm_gripper_payload/fre_gripper__fixed.stl"/>
+        </geometry>
+      </collision> -->
+      <visual>
+        <origin xyz="0 0 -0.0908625" rpy="0 0 0"/>
+        <geometry>
+          <cylinder length="0.241725" radius="0.008"/>
+        </geometry>
+        <material name="${prefix}projection_visual_material">
+          <color rgba="0.596078 0.121569 0.67451 1"/>
+        </material>
+      </visual>
+    </link>
+
+    <!-- Separate zero-mass link so the thin projection cylinder renders its own color in RViz. -->
+    <link name="${prefix}l5_cylinder_vis">
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="1e-9"/>
+        <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+      </inertial>
+      <visual>
+        <origin xyz="0 0 -0.5" rpy="0 0 0"/>
+        <geometry>
+          <cylinder length="1.0" radius="0.002"/>
+        </geometry>
+        <material name="${prefix}cylinder_visual_material">
+          
+          <color rgba="1.0 0.0 0.0 1"/>
+        </material>
+      </visual>
+    </link>
+    <joint name="${prefix}l5_cylinder_vis_frame" type="fixed">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <parent link="${prefix}l5"/>
+      <child link="${prefix}l5_cylinder_vis"/>
+    </joint>
+
+    <link name="${prefix}arm_dh_j5">
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="1e-9"/>
+        <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+      </inertial>
+    </link>
+    <joint name="${prefix}arm_dh_j5_frame" type="fixed">
+      <origin xyz="0 0 0.03" rpy="-3.14159 0 0"/>
+      <parent link="${prefix}l5"/>
+      <child link="${prefix}arm_dh_j5"/>
+      <axis xyz="0 0 0"/>
+    </joint>
+
+    <link name="${prefix}gripper_endpoint">
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="1e-9"/>
+        <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+      </inertial>
+    </link>
+    <joint name="${prefix}gripper_endpoint_frame" type="fixed">
+      <origin xyz="0 -0.0001 -0.211725" rpy="-3.14159 0 2.608e-09"/>
+      <parent link="${prefix}l5"/>
+      <child link="${prefix}gripper_endpoint"/>
+      <axis xyz="0 0 0"/>
+    </joint>
+
+    <joint name="${prefix}arm_j5" type="fixed">
+      <origin xyz="1.443e-09 -0.03 0.02894" rpy="-1.5708 1.5708 0"/>
+      <parent link="${prefix}l4"/>
+      <child link="${prefix}l5"/>
+    </joint>
+  </xacro:macro>
+</robot>
