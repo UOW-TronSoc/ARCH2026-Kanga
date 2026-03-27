@@ -1,0 +1,19 @@
+kanga_drive:
+  ros__parameters:
+    odrive_nodes:
+      - namespace: wheel_fl
+        node_id: 1
+        interface: can1
+        invert: true
+      - namespace: wheel_bl
+        node_id: 2
+        interface: can1
+        invert: true
+      - namespace: wheel_br
+        node_id: 3
+        interface: can1
+        invert: false
+      - namespace: wheel_fr
+        node_id: 4
+        interface: can1
+        invert: false

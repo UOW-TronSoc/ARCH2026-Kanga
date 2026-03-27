@@ -1,0 +1,25 @@
+kanga_arm_drive:
+  ros__parameters:
+    odrive_nodes:
+      - namespace: arm_j1
+        node_id: 1
+        interface: can2
+        invert: false
+        encoder_invert: true
+        reduction: 50.0
+      - namespace: arm_j2
+        node_id: 2
+        interface: can2
+        invert: true
+        reduction: 200.0
+      - namespace: arm_j3
+        node_id: 3
+        interface: can2
+        invert: true
+        encoder_invert: false
+        reduction: 200.0
+      - namespace: arm_j4
+        node_id: 4
+        interface: can2
+        invert: true
+        reduction: 28.0

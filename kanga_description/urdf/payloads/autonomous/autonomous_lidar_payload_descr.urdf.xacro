@@ -1,0 +1,11 @@
+<?xml version="1.0" ?>
+<robot name="autonomous_lidar_payload" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!-- Wrapper file:
+       Include the reusable autonomous payload macro and instantiate it standalone. -->
+  <xacro:include filename="$(find kanga_description)/urdf/payloads/autonomous/autonomous_lidar_payload_macro.urdf.xacro"/>
+
+  <!-- Local root used only when visualizing payload by itself. -->
+  <link name="base_link"/>
+  <!-- Instantiate payload and attach to local root. -->
+  <xacro:autonomous_lidar_payload parent="base_link"/>
+</robot>

@@ -1,0 +1,603 @@
+#include <rclcpp/rclcpp.hpp>
+#include <sensor_msgs/msg/joint_state.hpp>
+#include <rosgraph_msgs/msg/clock.hpp>
+#include <builtin_interfaces/msg/time.hpp>
+
+#include <raisim/World.hpp>
+#include <raisim/RaisimServer.hpp>
+
+#include <chrono>
+#include <thread>
+#include <string>
+#include <cmath>
+#include <mutex>
+#include <array>
+#include <algorithm>
+#include <vector>
+#include <Eigen/Dense>
+
+class RaisimBridge : public rclcpp::Node
+{
+public:
+		RaisimBridge() : Node("raisim_bridge")
+		{
+		// Setup ROS2 parameter time step for simulation, timers and models
+			pd_time_step_ms = this->declare_parameter<float>("pd_time_step_ms", 1.0);
+			stop_hold_velocity_epsilon_ = this->declare_parameter<double>("sim_stop_hold_velocity_epsilon", 0.02);
+
+			// Logging info
+			RCLCPP_INFO(this->get_logger(), "Time step for simulation: %f ms", pd_time_step_ms);
+
+			end_effector_config_ = this->declare_parameter<std::string>("end_effector_config", "roll_tool");
+
+			const auto link_lengths_param = this->declare_parameter<std::vector<double>>(
+				"link_lengths", std::vector<double>{});
+			const auto roll_tool_tf_param = this->declare_parameter<std::vector<double>>(
+				"roll_tool_transform_matrix", std::vector<double>{});
+			const auto scoop_tool_tf_param = this->declare_parameter<std::vector<double>>(
+				"scoop_tool_transform_matrix", std::vector<double>{});
+			if (link_lengths_param.size() > 0)
+			{
+				dh_d_[0] = link_lengths_param[0];
+			}
+			if (link_lengths_param.size() > 1)
+			{
+				dh_a_[1] = -std::abs(link_lengths_param[1]);
+			}
+			if (link_lengths_param.size() > 2)
+			{
+				dh_a_[2] = -std::abs(link_lengths_param[2]);
+			}
+			if (!vectorToMatrix4(roll_tool_tf_param, roll_tool_tf_))
+			{
+				const double roll_tool_d =
+					(link_lengths_param.size() > 4) ? link_lengths_param[4] : 0.241725;
+				roll_tool_tf_ = dhTransform(0.0, roll_tool_d, 0.0, 0.0);
+			}
+			if (!vectorToMatrix4(scoop_tool_tf_param, scoop_tool_tf_))
+			{
+				const double scoop_tool_d =
+					(link_lengths_param.size() > 4) ? link_lengths_param[4] : 0.230;
+				scoop_tool_tf_ = dhTransform(0.0, scoop_tool_d, 0.0, 0.0);
+			}
+
+		// Setup initial joint positions from kanga_arm_config (joint_initial_positions)
+		this->declare_parameter<std::vector<double>>("joint_initial_positions", std::vector<double>{0.0, 0.0, 0.0, 0.0, 0.0});
+		std::vector<double> joint_initial_positions;
+		this->get_parameter("joint_initial_positions", joint_initial_positions);
+		if (joint_initial_positions.empty()) {
+			RCLCPP_WARN(this->get_logger(), "joint_initial_positions empty; using default [0,0,0,0,0]");
+			joint_initial_positions = {0.0, 0.0, 0.0, 0.0, 0.0};
+		}
+		Eigen::VectorXd joint_pos = Eigen::Map<Eigen::VectorXd>(joint_initial_positions.data(), joint_initial_positions.size());
+		const int N_joints = static_cast<int>(joint_pos.size());
+
+		// Set world timestep for simulation
+		dt_ = pd_time_step_ms * 1e-3; // seconds
+		world.setTimeStep(dt_);
+
+		// Set default material properties (restitution, friction, adhesion)
+		world.setDefaultMaterial(1.0, 0.2, 0.0);
+
+		clock_pub_ = this->create_publisher<rosgraph_msgs::msg::Clock>(
+			"/clock", rclcpp::QoS(10).best_effort());
+
+		auto ground = world.addGround(0);
+		ground->setAppearance("hidden");
+
+		// Variable Gravity option
+		// world.setGravity(Eigen::Vector3d(0, 0, 0));
+
+		// Raisim Activation Key
+		raisim::World::setActivationKey("$ENV{HOME}/.raisim");
+
+		// Get robot URDF file path from description package
+		std::string urdf_path_base = this->declare_parameter<std::string>("robot_description_path", "/default/path");
+		std::string urdf_file = urdf_path_base + "/urdf/kanga_arm.urdf";
+
+		// Load robot into RaiSim and give name
+		robot = world.addArticulatedSystem(urdf_file);
+		robot->setName("Kanga Arm");
+
+		// Simulator-only: reverse j3 limit magnitudes (lower=-2.26893, upper=1.309)
+		{
+			auto limits = robot->getJointLimits();
+			constexpr size_t j3_idx = 2;
+			if (limits.size() > j3_idx)
+			{
+				std::vector<raisim::Vec<2>> limits_copy = limits;
+				double lo = limits_copy[j3_idx][0];
+				double hi = limits_copy[j3_idx][1];
+				limits_copy[j3_idx][0] = -std::abs(hi);
+				limits_copy[j3_idx][1] = std::abs(lo);
+				robot->setJointLimits(limits_copy);
+			}
+		}
+
+		world.setGravity({0, 0, 0});
+
+		// Remove collision between successive links only (adjacent joints)
+		robot->ignoreCollisionBetween(0, 1);
+		robot->ignoreCollisionBetween(1, 2);
+		robot->ignoreCollisionBetween(2, 3);
+		robot->ignoreCollisionBetween(3, 4);
+		robot->ignoreCollisionBetween(4, 5);
+		robot->ignoreCollisionBetween(5, 6);
+		robot->ignoreCollisionBetween(6, 7);
+
+		// Setup parameter sizes for generalised position, velocity, acceleration, force and damping and set to zero
+		gc = Eigen::VectorXd::Zero(robot->getGeneralizedCoordinateDim());
+		gv = Eigen::VectorXd::Zero(robot->getDOF());
+		gf = Eigen::VectorXd::Zero(robot->getDOF());
+
+		// Build init_state from joint_initial_positions to match robot gc format.
+		// Fixed-base arm: gc = [base_pos(3), base_quat(4), joint_positions(dof)] or just joint_positions.
+		const int gc_dim = static_cast<int>(robot->getGeneralizedCoordinateDim());
+		const int dof = robot->getDOF();
+		init_state = Eigen::VectorXd::Zero(gc_dim);
+		if (gc_dim == N_joints) {
+			init_state = joint_pos;
+		} else if (gc_dim >= 7 + dof) {
+			// Base at z=2 from URDF world_to_baserotation origin
+			init_state[0] = 0.0; init_state[1] = 0.0; init_state[2] = 2.0;
+			init_state[3] = 1.0; init_state[4] = 0.0; init_state[5] = 0.0; init_state[6] = 0.0;
+			const int joint_start = gc_dim - dof;
+			for (int i = 0; i < std::min(N_joints, dof); ++i)
+				init_state[joint_start + i] = (i < joint_pos.size()) ? joint_pos(i) : 0.0;
+		} else {
+			for (int i = 0; i < std::min(N_joints, gc_dim); ++i)
+				init_state(i) = joint_pos(i);
+		}
+
+		// Joint names used for ROS JointState publishing.
+		const auto joint_names_param = this->declare_parameter<std::vector<std::string>>(
+			"joint_names", std::vector<std::string>{});
+		if (joint_names_param.size() == static_cast<size_t>(robot->getDOF()))
+		{
+			joint_names_ = joint_names_param;
+		}
+		else
+		{
+			if (!joint_names_param.empty())
+			{
+				RCLCPP_WARN(this->get_logger(),
+							"Ignoring joint_names: expected %zu names, got %zu",
+							static_cast<size_t>(robot->getDOF()),
+							joint_names_param.size());
+			}
+
+			joint_names_.clear();
+			joint_names_.reserve(static_cast<size_t>(robot->getDOF()));
+			for (size_t i = 0; i < static_cast<size_t>(robot->getDOF()); ++i)
+			{
+				joint_names_.push_back("arm_j" + std::to_string(i + 1));
+			}
+			RCLCPP_WARN(this->get_logger(),
+						"Using default joint names arm_j1..arm_j%zu. Set joint_names in simulation.yaml to override.",
+						static_cast<size_t>(robot->getDOF()));
+		}
+
+		joint_encoder_invert_ = this->declare_parameter<std::vector<bool>>(
+			"joint_encoder_invert", std::vector<bool>(static_cast<size_t>(robot->getDOF()), false));
+		if (joint_encoder_invert_.size() < static_cast<size_t>(robot->getDOF()))
+		{
+			RCLCPP_WARN(
+				this->get_logger(),
+				"joint_encoder_invert has fewer than %zu entries; padding with false.",
+				static_cast<size_t>(robot->getDOF()));
+			joint_encoder_invert_.resize(static_cast<size_t>(robot->getDOF()), false);
+		}
+		else if (joint_encoder_invert_.size() > static_cast<size_t>(robot->getDOF()))
+		{
+			RCLCPP_WARN(
+				this->get_logger(),
+				"joint_encoder_invert has more than %zu entries; truncating extras.",
+				static_cast<size_t>(robot->getDOF()));
+			joint_encoder_invert_.resize(static_cast<size_t>(robot->getDOF()));
+		}
+
+		// PD gains from params so they can be tuned via YAML without recompiling.
+		const double kp_default = this->declare_parameter<double>("kp", 5000.0);
+		const double kd_default = this->declare_parameter<double>("kd", 500.0);
+		const auto kp_gains_param = this->declare_parameter<std::vector<double>>("kp_gains", std::vector<double>{});
+		const auto kd_gains_param = this->declare_parameter<std::vector<double>>("kd_gains", std::vector<double>{});
+		const size_t expected_kp_size = static_cast<size_t>(robot->getGeneralizedCoordinateDim());
+		const size_t expected_kd_size = static_cast<size_t>(robot->getDOF());
+
+		kp_ = Eigen::VectorXd::Constant(robot->getGeneralizedCoordinateDim(), kp_default);
+		kd_ = Eigen::VectorXd::Constant(robot->getDOF(), kd_default);
+
+		if (!kp_gains_param.empty())
+		{
+			if (kp_gains_param.size() == expected_kp_size)
+			{
+				kp_ = Eigen::Map<const Eigen::VectorXd>(kp_gains_param.data(), kp_gains_param.size());
+			}
+			else
+			{
+				RCLCPP_WARN(this->get_logger(),
+							"Ignoring kp_gains: expected %zu elements, got %zu",
+							expected_kp_size,
+							kp_gains_param.size());
+			}
+		}
+
+		if (!kd_gains_param.empty())
+		{
+			if (kd_gains_param.size() == expected_kd_size)
+			{
+				kd_ = Eigen::Map<const Eigen::VectorXd>(kd_gains_param.data(), kd_gains_param.size());
+			}
+			else
+			{
+				RCLCPP_WARN(this->get_logger(),
+							"Ignoring kd_gains: expected %zu elements, got %zu",
+							expected_kd_size,
+							kd_gains_param.size());
+			}
+		}
+
+		RCLCPP_INFO(this->get_logger(), "PD gains configured (kp size=%ld, kd size=%ld)", kp_.size(), kd_.size());
+
+		q_ref = init_state;
+		qd_ref = Eigen::VectorXd::Zero(dof);
+
+		// Set siulation position and velocity
+		robot->setGeneralizedCoordinate(init_state);
+		robot->setGeneralizedVelocity(gv);
+		robot->setGeneralizedForce(gf);
+
+		// CoM Ball Display
+		comSphere = server.addVisualSphere("viz_sphere", 0.01, 1, 0, 0, 1);
+
+		server.setMap("dune");
+
+		// Setup raisim server
+		server.launchServer(8080);
+
+		// Wait for server connection
+		RCLCPP_INFO(this->get_logger(), "Awaiting Connection to raisim server");
+		while (!server.isConnected())
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(10));
+		};
+
+		RCLCPP_INFO(this->get_logger(), "Server Connected");
+
+		std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+
+		RCLCPP_INFO(this->get_logger(), "RaisimBridge Node Initialised");
+
+		// Focus on the robot
+		server.focusOn(robot);
+
+		// Create Publisher for robot joint states
+		joint_state_pub = this->create_publisher<sensor_msgs::msg::JointState>("joint_states", 10);
+
+			// Create subscription to control node topic for joint effort commands
+			desired_cmd_sub_ = this->create_subscription<sensor_msgs::msg::JointState>(
+				"joint_desired_control", 10,
+				std::bind(&RaisimBridge::effortCommandCallback, this, std::placeholders::_1));
+
+		// Apply PD gains to the articulated system
+		robot->setPdGains(kp_, kd_);
+
+		// Create timer to update the simulation
+		timer_ = this->create_wall_timer(
+			std::chrono::duration<double>(dt_),
+			std::bind(&RaisimBridge::update, this));
+
+		// set_gc_srv_ = this->create_service<quadruped_interfaces::srv::SetGeneralizedCoordinate>(
+		// 	"set_generalized_coordinate",
+		// 	std::bind(&RaisimBridge::setGcCallback, this, std::placeholders::_1, std::placeholders::_2));
+
+		// Set start time checking dimulation time displacement
+		startTime = std::chrono::high_resolution_clock::now();
+	}
+
+	/*
+	 * Destructor to clean up resources and safely shut down the Raisim server
+	 */
+	~RaisimBridge() override
+	{
+		// Call cleanup function
+		cleanup();
+	}
+
+	/*
+	 * Cleanup function to ensure the Raisim server is properly shut down
+	 * This function is called in the destructor and can also be called manually
+	 * It calculates the total simulation time and logs it before shutting down the server
+	 */
+	void cleanup()
+	{
+		// If shutdown hasnt occured already
+		if (!shutdown_called_)
+		{
+			// Calculate simulation time displacement
+			auto endTime = std::chrono::high_resolution_clock::now();
+			auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
+			RCLCPP_INFO(
+				this->get_logger(),
+				"\nRan for %.3f s\nSimulated time: %.3f s\nShutting down RaisimBridge",
+				duration * 1e-3,
+				sim_time_ns_ * 1e-9);
+
+			// Kill the raisim server
+			server.killServer();
+
+			// Ensure shutdown not triggered again
+			shutdown_called_ = true;
+		}
+	}
+
+private:
+	/*
+	 * Function to update the simulation and publish joint states
+	 * This function is called at a fixed time interval defined by the timer
+	 */
+	void update()
+	{
+		// server.integrateWorldThreadSafe();
+		// return;
+		// RCLCPP_DEBUG(this->get_logger(), "Received joint effort command");
+		// server.integrateWorldThreadSafe();
+		// return;
+
+		// Update internal state vectors
+		gc = robot->getGeneralizedCoordinate().e();
+		gv = robot->getGeneralizedVelocity().e();
+		gf = robot->getGeneralizedForce().e();
+
+		// Place visualization sphere at the end-effector with a fixed offset
+		static constexpr int kEndLinkBodyIndex = 5; // link_5 is the final body
+		const Eigen::Vector3d tool_offset(0.0, 0.0, -0.21657356); // meters
+		raisim::Vec<3> ee_pos_rs;
+		raisim::Mat<3, 3> ee_rot_rs;
+		robot->getBodyPosition(kEndLinkBodyIndex, ee_pos_rs);
+		robot->getBodyOrientation(kEndLinkBodyIndex, ee_rot_rs); // world_R_link
+			Eigen::Vector3d sphere_pos = ee_pos_rs.e() + ee_rot_rs.e() * tool_offset;
+			comSphere->setPosition(sphere_pos[0], sphere_pos[1], sphere_pos[2]);
+
+		// Build a single time stamp for this step in sim time
+		builtin_interfaces::msg::Time stamp;
+		stamp.sec = static_cast<int32_t>(sim_time_ns_ / 1000000000LL);
+		stamp.nanosec = static_cast<uint32_t>(sim_time_ns_ % 1000000000LL);
+
+		// Send stamp to /clock topic for sim time
+		rosgraph_msgs::msg::Clock clk;
+		clk.clock = stamp;
+		clock_pub_->publish(clk);
+
+		// Setup the joinstate message
+		sensor_msgs::msg::JointState js;
+		int dof = robot->getDOF();
+		js.header.stamp = stamp;
+		js.name = joint_names_;
+		js.position.resize(dof);
+		js.velocity.resize(dof);
+		js.effort.resize(dof);
+
+			// Integrate velocity to get position reference (avoids jumps when switching controllers).
+			Eigen::VectorXd q_ref_local;
+			Eigen::VectorXd qd_ref_local;
+		{
+			std::lock_guard<std::mutex> lock(target_mutex_);
+				qd_ref_local = qd_ref;
+				q_ref_local = q_ref;
+			}
+
+			const size_t common_dim = std::min({
+				static_cast<size_t>(q_ref_local.size()),
+				static_cast<size_t>(qd_ref_local.size()),
+				static_cast<size_t>(gc.size())});
+
+			for (size_t i = 0; i < common_dim; ++i)
+			{
+				const auto idx = static_cast<Eigen::Index>(i);
+				if (std::abs(qd_ref_local[idx]) <= stop_hold_velocity_epsilon_)
+				{
+					q_ref_local[idx] = gc[idx];
+				}
+				else
+				{
+					q_ref_local[idx] += qd_ref_local[idx] * dt_;
+				}
+			}
+
+			// Clamp to joint limits
+			const auto limits = robot->getJointLimits();
+			for (size_t i = 0; i < common_dim && i < limits.size(); ++i)
+			{
+				const auto idx = static_cast<Eigen::Index>(i);
+				q_ref_local[idx] = std::clamp(q_ref_local[idx], limits[i][0], limits[i][1]);
+			}
+
+		{
+			std::lock_guard<std::mutex> lock(target_mutex_);
+				q_ref = q_ref_local;
+			}
+			robot->setPdTarget(q_ref_local, qd_ref_local);
+
+		for (int i = 0; i < dof; ++i)
+		{
+			double pos = gc[i];
+			double vel = gv[i];
+			double eff = gf[i];
+			if (!std::isfinite(pos) || !std::isfinite(vel) || !std::isfinite(eff))
+			{
+				RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+									 "Non-finite joint state detected at index %d. Clamping to zero.", i);
+				pos = 0.0;
+				vel = 0.0;
+				eff = 0.0;
+			}
+
+			// Add each joint to the jointstate message
+			js.position[i] = applyEncoderInversion(static_cast<size_t>(i), pos);
+			js.velocity[i] = applyEncoderInversion(static_cast<size_t>(i), vel);
+			js.effort[i] = eff;
+		}
+
+		// Publish joint states
+		joint_state_pub->publish(js);
+
+		// Step simulation
+		server.integrateWorldThreadSafe();
+
+		// Update simulated time
+		sim_time_ns_ += static_cast<int64_t>(dt_ * 1e9);
+	}
+
+		bool vectorToMatrix4(const std::vector<double> & values, Eigen::Matrix4d & out)
+		{
+			if (values.size() != 16U)
+			{
+				return false;
+			}
+
+			Eigen::Matrix4d matrix = Eigen::Matrix4d::Zero();
+			for (int r = 0; r < 4; ++r)
+			{
+				for (int c = 0; c < 4; ++c)
+				{
+					matrix(r, c) = values[static_cast<size_t>(r * 4 + c)];
+				}
+			}
+			matrix.row(3) = Eigen::RowVector4d(0.0, 0.0, 0.0, 1.0);
+			out = matrix;
+			return true;
+		}
+
+		static Eigen::Matrix4d dhTransform(double theta, double d, double a, double alpha)
+		{
+			const double ct = std::cos(theta);
+			const double st = std::sin(theta);
+			const double ca = std::cos(alpha);
+			const double sa = std::sin(alpha);
+
+			Eigen::Matrix4d t = Eigen::Matrix4d::Identity();
+			t(0, 0) = ct;
+			t(0, 1) = -st * ca;
+			t(0, 2) = st * sa;
+			t(0, 3) = a * ct;
+			t(1, 0) = st;
+			t(1, 1) = ct * ca;
+			t(1, 2) = -ct * sa;
+			t(1, 3) = a * st;
+			t(2, 1) = sa;
+			t(2, 2) = ca;
+			t(2, 3) = d;
+			return t;
+		}
+
+		const Eigen::Matrix4d & activeToolTransform() const
+		{
+			if (end_effector_config_ == "scoop")
+			{
+				return scoop_tool_tf_;
+			}
+			return roll_tool_tf_;
+		}
+
+		Eigen::Vector3d computeFkPosition(const Eigen::VectorXd & q) const
+		{
+			Eigen::Matrix4d t = Eigen::Matrix4d::Identity();
+			const size_t active_dof = std::min<size_t>(4, static_cast<size_t>(q.size()));
+			for (size_t i = 0; i < active_dof; ++i)
+			{
+				const double theta = theta_offsets_[i] + q[static_cast<Eigen::Index>(i)];
+				t = t * dhTransform(theta, dh_d_[i], dh_a_[i], dh_alpha_[i]);
+			}
+			t = t * activeToolTransform();
+			return t.block<3, 1>(0, 3);
+		}
+
+		double applyEncoderInversion(size_t index, double value) const
+		{
+			if (index < joint_encoder_invert_.size() && joint_encoder_invert_[index])
+			{
+				return -value;
+			}
+			return value;
+		}
+
+		/*
+		 * Callback function to handle incoming joint effort commands.
+		 * Saves velocity commands only; position is integrated in the sim update loop
+		 * to avoid jumps when switching between joint and EE controllers.
+		 */
+		void effortCommandCallback(const sensor_msgs::msg::JointState::SharedPtr msg)
+		{
+			const size_t expected_dof = static_cast<size_t>(robot->getDOF());
+			if (msg->velocity.empty())
+			{
+				RCLCPP_WARN_THROTTLE(
+					this->get_logger(), *this->get_clock(), 1000,
+					"Received joint_desired_control without velocity; expected up to %zu joints",
+					expected_dof);
+				return;
+			}
+
+			const size_t command_dof = std::min(msg->velocity.size(), expected_dof);
+			std::lock_guard<std::mutex> lock(target_mutex_);
+
+			for (size_t i = 0; i < command_dof; ++i)
+				qd_ref[i] = msg->velocity[i];
+			for (size_t i = command_dof; i < expected_dof; ++i)
+				qd_ref[i] = 0.0;
+		}
+
+
+	// Raisim control variables
+	bool shutdown_called_ = false;
+	raisim::World world;
+	raisim::RaisimServer server{&world};
+	raisim::ArticulatedSystem *robot;
+	raisim::Visuals *comSphere;
+	Eigen::VectorXd gc, gv, gf, init_state;
+	Eigen::VectorXd q_ref, qd_ref;
+	Eigen::VectorXd kp_, kd_;
+	std::vector<std::string> joint_names_;
+	std::vector<bool> joint_encoder_invert_;
+	std::mutex target_mutex_;
+
+	// Declare ROS2 publishers, sibscribers and timers
+		rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_state_pub;
+		rclcpp::Subscription<sensor_msgs::msg::JointState>::SharedPtr desired_cmd_sub_;
+		rclcpp::TimerBase::SharedPtr timer_;
+
+	// Declare internal timer variables
+	std::chrono::_V2::system_clock::time_point startTime;
+
+	// Declare parameters for simulation and control
+		float pd_time_step_ms;
+		rclcpp::Publisher<rosgraph_msgs::msg::Clock>::SharedPtr clock_pub_;
+		int64_t sim_time_ns_ = 0; // simulated time in nanoseconds
+		double dt_ = 0.0;		  // seconds, equals world timestep
+		double stop_hold_velocity_epsilon_{0.02};
+
+		std::string end_effector_config_{"roll_tool"};
+		std::array<double, 4> dh_d_{0.084, 0.111, -0.0905, 0.06844};
+		std::array<double, 4> dh_a_{0.0, -0.449997, -0.390, 0.0};
+		std::array<double, 4> dh_alpha_{-0.5 * M_PI, 0.0, 0.0, 0.5 * M_PI};
+		std::array<double, 4> theta_offsets_{0.0, 0.5 * M_PI, 0.5 * M_PI, 0.0};
+		Eigen::Matrix4d roll_tool_tf_{dhTransform(0.0, 0.241725, 0.0, 0.0)};
+		Eigen::Matrix4d scoop_tool_tf_{dhTransform(0.0, 0.230, 0.0, 0.0)};
+
+};
+
+int main(int argc, char **argv)
+{
+	rclcpp::init(argc, argv);
+
+	auto node = std::make_shared<RaisimBridge>();
+
+	// Trigger node cleanup on shutdown (e.g., Ctrl+C)
+	rclcpp::on_shutdown([node]()
+						{ node->cleanup(); });
+
+	rclcpp::spin(node);
+	rclcpp::shutdown();
+	return 0;
+}

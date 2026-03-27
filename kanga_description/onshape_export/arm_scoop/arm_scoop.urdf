@@ -1,0 +1,59 @@
+<?xml version="1.0" ?>
+<!-- Generated using onshape-to-robot -->
+<!-- Onshape https://tronsoc.onshape.com/documents/5c74485ef1d773fbe17b5191/w/13a360a01956ee72624f8844/e/acb4508c560633922a6db675 -->
+<robot name="arm_scoop">
+  <!-- Link l4 -->
+  <link name="l4">
+    <inertial>
+      <origin xyz="-0.00610686 -0.00444101 0.0292163" rpy="0 0 0"/>
+      <mass value="0.8"/>
+      <inertia ixx="0.00542103" ixy="0.00140642" ixz="8.36659e-05" iyy="0.00132481" iyz="-0.000129984" izz="0.00548139"/>
+    </inertial>
+    <!-- Part l4 -->
+    <visual>
+      <origin xyz="0.0178029 -0.0177509 -0.0105145" rpy="1.2979e-08 -1.5708 0"/>
+      <geometry>
+        <mesh filename="package://kanga_description/assets_kanga_arm_scoop/l4.stl"/>
+      </geometry>
+      <material name="l4_material">
+        <color rgba="0.0862745 0.317647 0.690196 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0.0178029 -0.0177509 -0.0105145" rpy="1.2979e-08 -1.5708 0"/>
+      <geometry>
+        <mesh filename="package://kanga_description/assets_kanga_arm_scoop/l4.stl"/>
+      </geometry>
+    </collision>
+  </link>
+  <!-- Frame rsd435i_mount (dummy link + fixed joint) -->
+  <link name="rsd435i_mount">
+    <origin xyz="0 0 0" rpy="0 -0 0"/>
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="1e-9"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+  </link>
+  <joint name="rsd435i_mount_frame" type="fixed">
+    <origin xyz="-0.0660965 0.0953744 0.056" rpy="1.5708 -0 -1.5708"/>
+    <parent link="l4"/>
+    <child link="rsd435i_mount"/>
+    <axis xyz="0 0 0"/>
+  </joint>
+  <!-- Frame scoop_endpoint (dummy link + fixed joint) -->
+  <link name="scoop_endpoint">
+    <origin xyz="0 0 0" rpy="0 -0 0"/>
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="1e-9"/>
+      <inertia ixx="0" ixy="0" ixz="0" iyy="0" iyz="0" izz="0"/>
+    </inertial>
+  </link>
+  <joint name="scoop_endpoint_frame" type="fixed">
+    <origin xyz="0.0305 -0.139 0.02894" rpy="1.5708 1.5708 0"/>
+    <parent link="l4"/>
+    <child link="scoop_endpoint"/>
+    <axis xyz="0 0 0"/>
+  </joint>
+</robot>

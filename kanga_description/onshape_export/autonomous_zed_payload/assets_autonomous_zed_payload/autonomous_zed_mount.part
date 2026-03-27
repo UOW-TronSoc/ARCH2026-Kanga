@@ -1,0 +1,13 @@
+{
+    "configuration": "default",
+    "documentId": "a04fc62c100c90ae88802972",
+    "documentMicroversion": "960033267fa6f1a80e91d123",
+    "elementId": "20362f6c8a365152f71e0489",
+    "fullConfiguration": "default",
+    "id": "MlJCWiWLulgrEme2x",
+    "isStandardContent": false,
+    "name": "autonomous_zed_mount <1>",
+    "partId": "JFD",
+    "suppressed": false,
+    "type": "Part"
+}
