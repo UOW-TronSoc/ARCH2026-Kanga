@@ -13,7 +13,7 @@ def generate_launch_description():
     kanga_nav2_share = get_package_share_directory('kanga_nav2')
     kanga_sim_share = get_package_share_directory('kanga_sim')
 
-    default_map = os.path.join(kanga_nav2_share, 'maps', 'kanga_static_map.yaml')
+    default_map = os.path.join(kanga_nav2_share, 'maps', 'fence_map.yaml')
     default_params = os.path.join(kanga_nav2_share, 'config', 'nav2_params.yaml')
 
     entity = LaunchConfiguration('entity')

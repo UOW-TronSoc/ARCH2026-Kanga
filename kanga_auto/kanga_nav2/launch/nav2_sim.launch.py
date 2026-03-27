@@ -15,7 +15,7 @@ def generate_launch_description():
     pkg_share = get_package_share_directory('kanga_nav2')
     nav2_bringup_dir = get_package_share_directory('nav2_bringup')
 
-    default_map = os.path.join(pkg_share, 'maps', 'kanga_static_map.yaml')
+    default_map = os.path.join(pkg_share, 'maps', 'fence_map.yaml')
     default_params = os.path.join(pkg_share, 'config', 'nav2_params.yaml')
     default_rviz = os.path.join(pkg_share, 'rviz', 'nav2.rviz')
 

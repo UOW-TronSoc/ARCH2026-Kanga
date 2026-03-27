@@ -25,38 +25,98 @@
 # - The loader still accepts legacy keys (`radians`, `target_yaw_rad`),
 #   but prefer degree-based keys in this file.
 operations:
-  - type: goto
-    # Map-frame target position (meters)
-    x: 5.0
-    y: 5.0
-
-  - type: spin
-    # Relative rotation (degrees)
-    degrees: 360.0
-    # Timeout for this operation (seconds)
-    time_allowance_sec: 30.0
-#PEE PEE POO POO
-  - type: goto
-    x: 20.0 
-    y: 5.0
-
-  - type: spin
-    degrees: 360.0
-    time_allowance_sec: 30.0
+  - type: face_yaw
+    target_yaw_deg: 90.0
 
   - type: goto
-    x: 20.0
-    y: 15.0
+    x: 0.0
+    y: 3.5
 
   - type: face_yaw
-    # Absolute heading in map frame (degrees)
-    target_yaw_deg: 0.0
-    time_allowance_sec: 30.0
+    target_yaw_deg: 180.0
 
   - type: goto
-    x: 5.0
-    y: 15.0
+    x: -10.0
+    y: 3.5
 
   - type: spin
     degrees: 360.0
-    time_allowance_sec: 30.0
+
+  - type: face_yaw
+    target_yaw_deg: 0.0
+
+  - type: goto
+    x: 14.0
+    y: 3.5
+
+  - type: face_yaw
+    target_yaw_deg: 90.0
+
+  - type: goto
+    x: 14.0
+    y: 5.0
+
+  - type: face_yaw
+    target_yaw_deg: 153.435
+
+  - type: goto
+    x: 10.0
+    y: 7.0
+
+  - type: face_yaw
+    target_yaw_deg: 129.805
+
+  - type: goto
+    x: 0.0
+    y: 19.0
+
+  - type: face_yaw
+    target_yaw_deg: -50.194
+
+  - type: goto
+    x: 4.0
+    y: 14.0
+
+  - type: spin
+    degrees: 360.0
+
+  - type: face_yaw
+    target_yaw_deg: -135.0
+
+  - type: goto
+    x: -1.5
+    y: 8.5
+
+  - type: spin
+    degrees: 360.0
+
+  - type: face_yaw
+    target_yaw_deg: 135.0
+
+  - type: goto
+    x: -10.0
+    y: 18.0
+
+  - type: face_yaw
+    target_yaw_deg: 90.0
+
+  - type: goto
+    x: -10.0
+    y: 20.0
+
+  - type: face_yaw
+    target_yaw_deg: 0.0
+
+  - type: goto
+    x: 12.0
+    y: 20.0
+
+  - type: face_yaw
+    target_yaw_deg: -104.03
+
+  - type: goto
+    x: 11.0
+    y: 16.0
+
+  - type: spin
+    degrees: 360.0

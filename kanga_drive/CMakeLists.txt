@@ -18,9 +18,13 @@ ament_target_dependencies(wheel_command_mapper rclcpp geometry_msgs std_msgs kan
 add_executable(wheel_command_mapper_new src/wheel_command_mapper_new.cpp)
 ament_target_dependencies(wheel_command_mapper_new rclcpp geometry_msgs std_msgs kanga_interfaces)
 
+add_executable(twist_to_percent src/twist_to_percent.cpp)
+ament_target_dependencies(twist_to_percent rclcpp geometry_msgs)
+
 install(TARGETS
   wheel_command_mapper
   wheel_command_mapper_new
+  twist_to_percent
   DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY

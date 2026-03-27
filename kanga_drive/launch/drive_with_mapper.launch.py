@@ -15,6 +15,18 @@ def generate_launch_description() -> LaunchDescription:
         )
     )
 
+    twist_to_percent_node = Node(
+        package='kanga_drive',
+        executable='twist_to_percent',
+        name='twist_to_percent',
+        output='screen',
+        parameters=[{
+            'max_linear_x': 0.4,
+            'max_linear_y': 0.4,
+            'max_angular_z': 2.2,
+        }],
+    )
+
     wheel_mapper_node = Node(
         package='kanga_drive',
         executable='wheel_command_mapper',
@@ -24,5 +36,6 @@ def generate_launch_description() -> LaunchDescription:
 
     return LaunchDescription([
         odrive_multi_launch,
+        twist_to_percent_node,
         wheel_mapper_node,
     ])

@@ -188,7 +188,7 @@ public:
             std::bind(&WheelCommandMapperNew::tick_axis_state_requests, this));
 
         twist_sub_ = this->create_subscription<geometry_msgs::msg::Twist>(
-            "/cmd_vel", 10,
+            "/kanga_drive/cmd_vel", 10,
             std::bind(&WheelCommandMapperNew::twist_callback, this, std::placeholders::_1));
 
         RCLCPP_INFO(this->get_logger(), "wheel_command_mapper_new active");
