@@ -78,7 +78,7 @@ void setup() {
 //Pin Setup
   pinMode(HEATING_PIN, OUTPUT);
   pinMode(COOLING_PIN, OUTPUT);
-  digitalWrite(HEATING_PIN, LOW);
+  digitalWrite(HEATING_PIN, HIGH);
   digitalWrite(COOLING_PIN, LOW);
   Serial.print("Heating pin ");
   Serial.print(HEATING_PIN);
