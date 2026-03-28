@@ -33,18 +33,22 @@ DalyCanNode::DalyCanNode(const std::string &node_name) : rclcpp::Node(node_name)
     this->get_parameter("daly_node_id", daly_node_id_);
     this->get_parameter("req_period", req_period_);
 
-    // Publisher for battery information
-    rclcpp::QoS bat_info_qos(rclcpp::KeepAll{});
-    info_publisher_ = rclcpp::Node::create_publisher<BatteryInfo>("battery_info", bat_info_qos);
-
-    // Publisher for Daly BMS Status
-    rclcpp::QoS daly_stat_qos(rclcpp::KeepAll{});
-    stat_publisher_ = rclcpp::Node::create_publisher<BMSStatus>("bms_status", daly_stat_qos);
+    // KeepLast(10), reliable (rclcpp default). KeepAll broke compatibility with ros2 topic echo,
+    // which defaults to sensor_data (best effort) when it cannot read publisher QoS from the graph.
+    rclcpp::QoS pub_qos(10);
+    info_publisher_ = this->create_publisher<BatteryInfo>("battery_info", pub_qos);
+    stat_publisher_ = this->create_publisher<BMSStatus>("bms_status", pub_qos);
 
     // Timer to trigger command request to BMS
     request_timer_ = this->create_wall_timer(
         std::chrono::duration<double>(req_period_),
         std::bind(&DalyCanNode::request_daly_data, this));
+
+    // Publish on the same thread as spin(); publishing from the SocketCAN epoll thread can prevent
+    // DDS from delivering to ros2 topic echo / other nodes with rmw_fastrtps on some setups.
+    publish_flush_timer_ = this->create_wall_timer(
+        std::chrono::milliseconds(20),
+        std::bind(&DalyCanNode::flush_ready_messages, this));
 }
 
 // Clean up can interface resources on shutdown.
@@ -173,26 +177,28 @@ void DalyCanNode::recv_callback(const can_frame &frame)
 
     }
 
-    // Flag Loggin to check data status
-    // RCLCPP_INFO(rclcpp::Node::get_logger(), "info_pub_flag_: %s", std::bitset<4>(info_pub_flag_).to_string().c_str());
-    // RCLCPP_INFO(rclcpp::Node::get_logger(), "status_pub_flag_: %s", std::bitset<4>(status_pub_flag_).to_string().c_str());
+    // Publishing is done in flush_ready_messages() on the executor thread (see publish_flush_timer_).
+}
 
-    // Check if all data has been updated based on publish flag
-    if ((info_pub_flag_ & 0b0011) == 0b0011)
+void DalyCanNode::flush_ready_messages()
+{
     {
-        RCLCPP_INFO(rclcpp::Node::get_logger(), "Publishing bat info");
-        bat_info_.header.stamp = this->now();
-        info_publisher_->publish(bat_info_);
-        info_pub_flag_ = 0;
+        std::lock_guard<std::mutex> guard(bat_info_mutex_);
+        if ((info_pub_flag_ & 0b0011) == 0b0011) {
+            RCLCPP_INFO(this->get_logger(), "Publishing bat info");
+            bat_info_.header.stamp = this->now();
+            info_publisher_->publish(bat_info_);
+            info_pub_flag_ = 0;
+        }
     }
-
-    // Check if all data has been updated based on publish flag
-    if ((status_pub_flag_ & 0b1111) == 0b1111)
     {
-        RCLCPP_INFO(rclcpp::Node::get_logger(), "Publishing bms status");
-        daly_stat_.header.stamp = this->now();
-        stat_publisher_->publish(daly_stat_);
-        status_pub_flag_ = 0;
+        std::lock_guard<std::mutex> guard(daly_stat_mutex_);
+        if ((status_pub_flag_ & 0b1111) == 0b1111) {
+            RCLCPP_INFO(this->get_logger(), "Publishing bms status");
+            daly_stat_.header.stamp = this->now();
+            stat_publisher_->publish(daly_stat_);
+            status_pub_flag_ = 0;
+        }
     }
 }
 

@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"path": "../../../.."
+		},
+		{
+			"path": "../../../../../../../usr/local/unitree_lidar_sdk"
+		}
+	],
+	"settings": {}
+}

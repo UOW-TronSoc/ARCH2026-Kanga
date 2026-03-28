@@ -20,6 +20,7 @@ def generate_launch_description():
 
     use_sim_time = LaunchConfiguration("use_sim_time", default="false")
     use_joint_state_publisher = LaunchConfiguration("use_joint_state_publisher", default="false")
+    launch_rviz = LaunchConfiguration("launch_rviz", default="false")
 
     nodes = [
         DeclareLaunchArgument(
@@ -31,6 +32,11 @@ def generate_launch_description():
             "use_joint_state_publisher",
             default_value="false",
             description="Run joint_state_publisher(_gui). Keep false when another node publishes /joint_states.",
+        ),
+        DeclareLaunchArgument(
+            "launch_rviz",
+            default_value="false",
+            description="Start RViz2 on this machine. On the robot, keep false and run RViz on a workstation.",
         ),
         Node(
             package="robot_state_publisher",
@@ -74,6 +80,7 @@ def generate_launch_description():
                 executable="rviz2",
                 arguments=["-d", rviz_config_path],
                 parameters=[{"use_sim_time": use_sim_time}],
+                condition=IfCondition(launch_rviz),
                 output="screen",
             )
         )

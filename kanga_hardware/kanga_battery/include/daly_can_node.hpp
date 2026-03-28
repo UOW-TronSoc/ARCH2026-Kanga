@@ -51,6 +51,9 @@ private:
     // Timer callback: periodically sends request frames for all Daly command IDs.
     void request_daly_data(void);
 
+    // Runs on the executor thread; publishes when CAN recv has filled the required flags.
+    void flush_ready_messages();
+
     // Utility to build the extended CAN identifier used by Daly requests.
     // Format is (0x18 << 24) | (data_id << 16) | node_id.
     uint32_t build_extended_id(uint8_t data_id, uint16_t node_id);
@@ -84,6 +87,7 @@ private:
     // Request timer parameters
     uint16_t req_period_ = 1;                                    // Period between request cycles (seconds)
     rclcpp::TimerBase::SharedPtr request_timer_;                 // ROS timer for periodic polling
+    rclcpp::TimerBase::SharedPtr publish_flush_timer_;           // Publishes from executor thread (not CAN thread)
 };
 
 #endif // DALY_CAN_NODE_HPP

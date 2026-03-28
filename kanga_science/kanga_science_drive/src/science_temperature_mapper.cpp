@@ -19,11 +19,12 @@ public:
   ScienceTemperatureMapper()
   : Node("science_temperature_mapper")
   {
-    can_interface_ = this->declare_parameter<std::string>("can_interface", "can0");
+    can_interface_ = this->declare_parameter<std::string>("can_interface", "can2");
 
     if (can_interface_.empty()) {
-      RCLCPP_WARN(this->get_logger(), "Parameter 'can_interface' is empty; defaulting to 'can0'");
-      can_interface_ = "can0";
+      RCLCPP_WARN(this->get_logger(), "Parameter 'can_interface' is empty; defaulting to 'can2'");
+      can_interface_ = "can2";
+
     }
 
     const std::string can_tx_topic = "CAN/" + can_interface_ + "/transmit";
