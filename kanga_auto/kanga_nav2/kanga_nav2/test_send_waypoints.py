@@ -66,7 +66,7 @@ def make_xy_pose(navigator: BasicNavigator, x: float, y: float) -> PoseStamped:
     """
     pose = PoseStamped()
     pose.header.frame_id = "map"
-    pose.header.stamp = navigator.get_clock().now().to_msg()
+    pose.header.stamp = rclpy.time.Time().to_msg()
     pose.pose.position.x = float(x)
     pose.pose.position.y = float(y)
     pose.pose.orientation.w = 1.0
@@ -81,7 +81,7 @@ def make_pose_with_yaw(navigator: BasicNavigator, x: float, y: float, yaw_rad: f
     """
     pose = PoseStamped()
     pose.header.frame_id = "map"
-    pose.header.stamp = navigator.get_clock().now().to_msg()
+    pose.header.stamp = rclpy.time.Time().to_msg()
     pose.pose.position.x = float(x)
     pose.pose.position.y = float(y)
 
@@ -226,9 +226,19 @@ def do_face_yaw(
     Requires valid TF for map -> base_link.
     """
     try:
-        timeout = Duration(seconds=1.0)
-        if not tf_buffer.can_transform("map", "base_link", rclpy.time.Time(), timeout=timeout):
-            node.get_logger().error("TF map->base_link not available")
+        max_retries = 10
+        for attempt in range(max_retries):
+            timeout = Duration(seconds=2.0)
+            if tf_buffer.can_transform("map", "base_link", rclpy.time.Time(), timeout=timeout):
+                break
+            node.get_logger().warn(
+                f"TF map->base_link not available (attempt {attempt + 1}/{max_retries}), retrying..."
+            )
+            rclpy.spin_once(node, timeout_sec=0.5)
+        else:
+            node.get_logger().error(
+                f"TF map->base_link not available after {max_retries} attempts"
+            )
             return False
         tf = tf_buffer.lookup_transform("map", "base_link", rclpy.time.Time())
         q = tf.transform.rotation
@@ -254,7 +264,7 @@ def do_goto(navigator: BasicNavigator, pose: PoseStamped, timeout_sec: float = 1
         if time.time() - t0 > timeout_sec:
             navigator.cancelTask()
             return TaskResult.CANCELED
-        rclpy.spin_once(navigator, timeout_sec=0.1)
+        time.sleep(0.1)
 
     return navigator.getResult()
 

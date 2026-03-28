@@ -22,8 +22,8 @@ operations:
     target_yaw_deg: -90.0
 
   - type: goto
-    x: 0.0
-    y: 2.0
+    x: 2.0
+    y: 0.0
 
   - type: face_yaw
     target_yaw_deg: -180.0

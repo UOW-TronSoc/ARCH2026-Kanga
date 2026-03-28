@@ -1,11 +1,16 @@
 """Nav2 bringup for the real Kanga robot (no Gazebo).
 
-Run bringup pipeline.launch.py first to start RTAB-Map, which provides:
-  - /odom                       odometry  (nav_msgs/Odometry)
-  - TF: map -> odom             localisation transform
-  - TF: odom -> base_link       odometry transform
+Run your robot / perception bringup first (e.g. pipeline with RTAB-Map), which must provide:
+  - /odom                       (nav_msgs/Odometry)
+  - TF: map -> odom             (localization)
+  - TF: odom -> base_link       (odometry)
 
-This launch then outputs:
+Without that stack, costmaps will warn that ``map`` / ``odom`` frames do not exist.
+
+For bench testing Nav2 alone, pass ``use_fake_tf:=true`` to publish identity static
+transforms map->odom and odom->base_link (do not use on the real robot while SLAM runs).
+
+This launch outputs:
   - /cmd_vel                    velocity commands (geometry_msgs/Twist)
 """
 
@@ -20,6 +25,20 @@ from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
 
+def _static_tf_node(name, parent, child, condition):
+    return Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name=name,
+        arguments=[
+            '--x', '0', '--y', '0', '--z', '0',
+            '--qx', '0', '--qy', '0', '--qz', '0', '--qw', '1',
+            '--frame-id', parent, '--child-frame-id', child,
+        ],
+        condition=condition,
+    )
+
+
 def generate_launch_description():
     pkg_share = get_package_share_directory('kanga_nav2')
     nav2_bringup_dir = get_package_share_directory('nav2_bringup')
@@ -30,6 +49,7 @@ def generate_launch_description():
 
     use_sim_time = LaunchConfiguration('use_sim_time')
     use_rviz = LaunchConfiguration('use_rviz')
+    use_fake_tf = LaunchConfiguration('use_fake_tf')
     map_yaml = LaunchConfiguration('map')
     params_file = LaunchConfiguration('params_file')
 
@@ -79,11 +99,25 @@ def generate_launch_description():
         parameters=[{'use_sim_time': use_sim_time}],
     )
 
+    fake_tf_cond = IfCondition(use_fake_tf)
+    fake_tf_map_odom = _static_tf_node(
+        'fake_tf_map_to_odom', 'map', 'odom', fake_tf_cond)
+    fake_tf_odom_base = _static_tf_node(
+        'fake_tf_odom_to_base_link', 'odom', 'base_link', fake_tf_cond)
+
     return LaunchDescription([
         DeclareLaunchArgument('use_sim_time', default_value='false'),
         DeclareLaunchArgument('use_rviz', default_value='false'),
+        DeclareLaunchArgument(
+            'use_fake_tf',
+            default_value='false',
+            description='If true, publish static map->odom and odom->base_link (testing only; '
+            'conflicts with real SLAM / odometry).',
+        ),
         DeclareLaunchArgument('map', default_value=default_map),
         DeclareLaunchArgument('params_file', default_value=default_params),
+        fake_tf_map_odom,
+        fake_tf_odom_base,
         map_server,
         lifecycle_manager_map,
         nav2_bringup,
