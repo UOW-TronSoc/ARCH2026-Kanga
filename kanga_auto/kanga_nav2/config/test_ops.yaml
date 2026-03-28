@@ -1,0 +1,33 @@
+# Test waypoint operation sequence
+# See waypoint_ops.yaml for full schema documentation.
+operations:
+  - type: face_yaw
+    target_yaw_deg: 90.0
+
+  - type: goto
+    x: 0.0
+    y: 4.5
+
+  - type: spin
+    degrees: 360.0
+
+  - type: face_yaw
+    target_yaw_deg: -45.0
+
+  - type: goto
+    x: 2.0
+    y: 2.5
+
+  - type: face_yaw
+    target_yaw_deg: -90.0
+
+  - type: goto
+    x: 0.0
+    y: 2.0
+
+  - type: face_yaw
+    target_yaw_deg: -180.0
+
+  - type: goto
+    x: 0.0
+    y: 0.0

@@ -26,23 +26,23 @@ public:
     }
 
 private:
-    static double to_percent(double value, double max_abs)
+    static double to_scaled(double value, double max_abs)
     {
         if (max_abs <= 0.0) {
             return 0.0;
         }
-        return std::clamp(value / max_abs * 100.0, -100.0, 100.0);
+        return std::clamp(value / max_abs, -1.0, 1.0);
     }
 
     void on_twist(const geometry_msgs::msg::Twist::SharedPtr msg)
     {
         geometry_msgs::msg::Twist out;
-        out.linear.x  = to_percent(msg->linear.x,  max_linear_x_);
-        out.linear.y  = to_percent(msg->linear.y,  max_linear_y_);
+        out.linear.x  = to_scaled(msg->linear.x,  max_linear_x_);
+        out.linear.y  = to_scaled(msg->linear.y,  max_linear_y_);
         out.linear.z  = msg->linear.z;
         out.angular.x = msg->angular.x;
         out.angular.y = msg->angular.y;
-        out.angular.z = to_percent(msg->angular.z, max_angular_z_);
+        out.angular.z = to_scaled(msg->angular.z, max_angular_z_);
         pub_->publish(out);
     }
 

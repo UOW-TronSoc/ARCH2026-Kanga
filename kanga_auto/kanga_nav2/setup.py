@@ -32,6 +32,7 @@ setup(
     entry_points={
         'console_scripts': [
             'send_waypoints = kanga_nav2.send_waypoints:main',
+            'test_send_waypoints = kanga_nav2.test_send_waypoints:main',
         ],
     },
 )
