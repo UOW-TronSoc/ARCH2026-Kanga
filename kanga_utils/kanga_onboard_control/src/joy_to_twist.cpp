@@ -23,15 +23,15 @@ private:
     {
         // RCLCPP_INFO(this->get_logger(), "converting");
 
-        if (msg->axes.size() < 3) {
+        if (msg->axes.size() < 4) {
             RCLCPP_WARN(this->get_logger(), "Not enough axes in /joy message");
             return;
         }
 
         geometry_msgs::msg::Twist twist;
-        twist.linear.x  = msg->axes[0] * 15; // axis 0 -> vx
-        twist.linear.y  = msg->axes[2] * 15; // axis 1 -> vy
-        twist.angular.z = msg->axes[1] * 15; // axis 2 -> wz
+        twist.linear.x  = msg->axes[1] * 100; // axis 1 -> forward/back
+        twist.angular.z = msg->axes[0] * 100; // axis 0 -> left/right spin
+        twist.linear.y  = (msg->axes[2] - msg->axes[3]) * 100; // axis 2/3 -> strafe (Q/E)
 
         cmd_pub_->publish(twist);
     }

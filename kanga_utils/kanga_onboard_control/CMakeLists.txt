@@ -10,12 +10,17 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(kanga_interfaces REQUIRED)
 
 add_executable(joy_to_twist src/joy_to_twist.cpp)
 ament_target_dependencies(joy_to_twist rclcpp sensor_msgs geometry_msgs)
 
+add_executable(joy_drive_enable src/joy_drive_enable.cpp)
+ament_target_dependencies(joy_drive_enable rclcpp sensor_msgs kanga_interfaces)
+
 install(TARGETS
   joy_to_twist
+  joy_drive_enable
   DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY

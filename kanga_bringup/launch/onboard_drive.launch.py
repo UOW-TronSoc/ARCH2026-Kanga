@@ -18,11 +18,11 @@ def generate_launch_description() -> LaunchDescription:
         )
     )
 
-    # keyboard_twist = IncludeLaunchDescription(
-    #     PythonLaunchDescriptionSource(
-    #         os.path.join(onboard_control_share, 'launch', 'keyboard_joy_with_twist.launch.py'),
-    #     )
-    # )
+    drive_control = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(onboard_control_share, 'launch', 'drive_control.launch.py'),
+        )
+    )
 
     daly_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
@@ -38,7 +38,7 @@ def generate_launch_description() -> LaunchDescription:
 
     return LaunchDescription([
         drive_with_mapper,
+        drive_control,
         daly_launch,
         camera_publisher_launch,
-        # keyboard_twist,
     ])
